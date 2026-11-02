@@ -1,0 +1,705 @@
+<title>Ananta MES</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: fixed command-bar on top, swappable full-bleed view below. Committed single dark "control-room" look. */
+:root{
+  --bg:#080B14; --bg2:#0C1120; --panel:#111829; --panel2:#0E1524; --raised:#16203A;
+  --line:#223049; --line2:#2D3C59;
+  --ink:#EAF0FA; --ink2:#A7B4D0; --ink3:#6E7D9E;
+  --accent:#39BDF8; --accent2:#8B93F8;
+  --f-AGL:#39BDF8; --f-ASL:#A78BFA; --f-AJL:#2DD4BF; --f-ABM:#F472B6;
+  --good:#34D399; --warn:#FBBF24; --crit:#FB6F70;
+  --good-dim:rgba(52,211,153,.14); --warn-dim:rgba(251,191,36,.14); --crit-dim:rgba(251,111,112,.14);
+  --disp:'Barlow Semi Condensed',system-ui,sans-serif;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --r:14px; --r2:10px;
+  --shadow:0 10px 30px -12px rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(57,189,248,.08), transparent 60%),
+    radial-gradient(900px 500px at 0% 0%, rgba(139,147,248,.07), transparent 55%),
+    var(--bg);
+  color:var(--ink); font-family:var(--body); -webkit-font-smoothing:antialiased;
+  font-size:14px; line-height:1.45;
+}
+.tnum{font-variant-numeric:tabular-nums}
+button{font-family:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:20px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- Command bar ---------- */
+.bar{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:30;
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));
+  background:linear-gradient(180deg,rgba(10,14,24,.96),rgba(10,14,24,.82));
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.logo{width:34px;height:34px;border-radius:9px;flex:none;
+  background:conic-gradient(from 210deg,var(--accent),var(--accent2),var(--f-AJL),var(--accent));
+  display:grid;place-items:center;color:#06101d;font-family:var(--disp);font-weight:700;font-size:18px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 6px 18px -6px var(--accent)}
+.brand b{font-family:var(--disp);font-weight:700;letter-spacing:.06em;font-size:19px;line-height:1}
+.brand span{display:block;font-size:10.5px;letter-spacing:.24em;color:var(--ink3);text-transform:uppercase;margin-top:2px}
+.tabs{display:flex;gap:4px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tab{appearance:none;border:0;background:transparent;color:var(--ink2);padding:8px 13px;border-radius:9px;
+  font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:.15s}
+.tab svg{width:15px;height:15px}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--raised);color:var(--ink);box-shadow:0 0 0 1px var(--line2) inset}
+.bar .right{margin-left:auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.clock{font-family:var(--mono);text-align:right;line-height:1.1}
+.clock b{font-size:17px;font-weight:600;letter-spacing:.02em}
+.clock span{display:block;font-size:11px;color:var(--ink3)}
+.live{display:inline-flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--good);font-weight:600}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 var(--good);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.55)}70%{box-shadow:0 0 0 7px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+
+.wrap{padding:18px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));max-width:1500px;margin:0 auto}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
+
+/* ---------- Generic bits ---------- */
+.panel{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.select,.inp{appearance:none;background:var(--panel2);border:1px solid var(--line2);color:var(--ink);
+  padding:9px 12px;border-radius:10px;font-family:inherit;font-size:13.5px;font-weight:500}
+.select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236E7D9E' stroke-width='2'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;cursor:pointer}
+.select:focus,.inp:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.btn{appearance:none;border:1px solid var(--line2);background:var(--raised);color:var(--ink);font-weight:600;font-size:13px;
+  padding:9px 15px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{border-color:var(--accent);color:#fff}
+.btn.primary{background:linear-gradient(180deg,var(--accent),#1f9fe0);border-color:transparent;color:#04131f}
+.btn.primary:hover{filter:brightness(1.07)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:600;letter-spacing:.02em}
+.pill.good{background:var(--good-dim);color:var(--good)} .pill.warn{background:var(--warn-dim);color:var(--warn)} .pill.crit{background:var(--crit-dim);color:var(--crit)}
+.pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+
+/* ---------- LINE TV ---------- */
+.tvhead{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:16px}
+.tvhead .lineid{display:flex;align-items:center;gap:16px}
+.lbadge{width:76px;height:76px;border-radius:16px;display:grid;place-items:center;flex:none;
+  font-family:var(--disp);font-weight:700;font-size:30px;color:#05101c;line-height:.9;text-align:center;position:relative;overflow:hidden}
+.lbadge small{display:block;font-size:11px;letter-spacing:.1em}
+.tvhead h1{font-family:var(--disp);font-weight:700;font-size:clamp(26px,4vw,40px);margin:0;line-height:1;letter-spacing:.01em}
+.tvhead .meta{color:var(--ink2);font-size:14px;margin-top:6px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.tvhead .meta b{color:var(--ink);font-weight:600}
+.tvsel{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+.tvgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tvgrid .kpis{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{padding:16px 18px;position:relative;overflow:hidden}
+.kpi .eyebrow{display:flex;align-items:center;gap:7px}
+.kpi .val{font-family:var(--disp);font-weight:700;font-size:clamp(30px,4.3vw,46px);line-height:1;margin-top:9px;letter-spacing:.01em}
+.kpi .sub{font-size:12.5px;color:var(--ink2);margin-top:7px}
+.kpi .spark{position:absolute;right:0;bottom:0;opacity:.5}
+.kpi.accent{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.card{padding:16px 18px}
+.card h3{margin:0 0 2px;font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:.02em}
+.card .cap{color:var(--ink3);font-size:12px;margin-bottom:12px}
+.chartbox{position:relative;width:100%}
+
+.gaugewrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.gauge{flex:none;position:relative;width:230px;max-width:46vw}
+.gauge .read{position:absolute;left:0;right:0;bottom:8%;text-align:center}
+.gauge .read b{font-family:var(--disp);font-weight:700;font-size:44px;line-height:1;display:block}
+.gauge .read span{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.efflegend{flex:1;min-width:160px;display:flex;flex-direction:column;gap:10px}
+.efflegend .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.efflegend .row:last-child{border:0}
+.efflegend .k{color:var(--ink2);font-size:13px}
+.efflegend .v{font-family:var(--mono);font-weight:600;font-size:16px}
+
+/* ---------- Super Admin ---------- */
+.sectitle{display:flex;align-items:center;gap:12px;margin:4px 2px 14px}
+.sectitle h2{font-family:var(--disp);font-weight:600;font-size:22px;margin:0;letter-spacing:.02em}
+.sectitle .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.facgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.faccard{padding:16px 17px;position:relative;overflow:hidden;cursor:pointer;transition:.15s}
+.faccard:hover{transform:translateY(-2px);border-color:var(--line2)}
+.faccard .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.faccard .fcode{font-family:var(--disp);font-weight:700;font-size:24px;letter-spacing:.04em;display:flex;align-items:center;gap:9px}
+.faccard .fname{font-size:11.5px;color:var(--ink3);margin-top:1px}
+.faccard .big{font-family:var(--disp);font-weight:700;font-size:34px;line-height:1;margin-top:13px}
+.faccard .big small{font-size:15px;color:var(--ink3);font-weight:600}
+.faccard .foot{display:flex;gap:14px;margin-top:11px;font-size:12px;color:var(--ink2)}
+.faccard .foot b{font-family:var(--mono);color:var(--ink)}
+.faccard .barbg{height:7px;border-radius:5px;background:var(--panel2);margin-top:12px;overflow:hidden;border:1px solid var(--line)}
+.faccard .barfl{height:100%;border-radius:5px}
+
+.dash2{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-bottom:22px}
+.tablewrap{overflow-x:auto;border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;min-width:720px}
+thead th{position:sticky;top:0;background:var(--panel2);text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink3);font-weight:600;padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;z-index:1}
+thead th.sortable:hover{color:var(--ink)}
+thead th .ar{opacity:.5;font-size:10px}
+tbody td{padding:10px 13px;border-bottom:1px solid var(--line);font-size:13.5px;white-space:nowrap}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.linetag{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.mini{height:6px;border-radius:4px;background:var(--panel2);overflow:hidden;min-width:70px;display:inline-block;vertical-align:middle;border:1px solid var(--line)}
+.mini i{display:block;height:100%}
+.rowlink{color:var(--accent);cursor:pointer;font-weight:600}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.chip{appearance:none;border:1px solid var(--line2);background:var(--panel2);color:var(--ink2);padding:7px 13px;border-radius:999px;font-weight:600;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.chip[aria-pressed="true"]{color:var(--ink);border-color:currentColor}
+.chip[aria-pressed="true"].c-all{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- Forms ---------- */
+.form2{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+.field label{font-size:12px;color:var(--ink2);font-weight:600;letter-spacing:.02em}
+.field .inp,.field .select{width:100%}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.auto{background:var(--good-dim);border-color:color-mix(in srgb,var(--good) 30%,var(--line2));color:#bff2dd}
+.hourtbl td,.hourtbl th{padding:7px 10px}
+.hourtbl input{width:100%;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 9px;font-family:var(--mono);text-align:right;font-size:13.5px}
+.hourtbl input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.hourtbl .effc{font-family:var(--mono);text-align:right;font-weight:600}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--raised);
+  border:1px solid var(--good);color:var(--ink);padding:12px 18px;border-radius:12px;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:10px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:60}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.note{font-size:12px;color:var(--ink3);margin-top:4px}
+
+@media(max-width:1080px){
+  .tvgrid .kpis{grid-template-columns:repeat(2,1fr)}
+  .facgrid{grid-template-columns:repeat(2,1fr)}
+  .dash2{grid-template-columns:1fr}
+  .form2{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .tvgrid{grid-template-columns:1fr}
+  .tvgrid .kpis{grid-template-columns:repeat(2,1fr)}
+  .facgrid{grid-template-columns:1fr}
+  .frow{grid-template-columns:1fr}
+  .brand span{display:none}
+}
+</style>
+
+<div class="bar">
+  <div class="brand">
+    <div class="logo">A</div>
+    <div><b>ANANTA · MES</b><span>Line Digitalization</span></div>
+  </div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-view="tv" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>Line TV</button>
+    <button class="tab" role="tab" data-view="admin" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Super Admin</button>
+    <button class="tab" role="tab" data-view="work" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v4M15 3v4M4 8h16M5 8v12a1 1 0 001 1h12a1 1 0 001-1V8"/><path d="M8 13h3M8 17h5"/></svg>Work Study</button>
+    <button class="tab" role="tab" data-view="worker" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0113 0"/></svg>Line Worker</button>
+  </div>
+  <div class="right">
+    <span class="live"><i></i>Live</span>
+    <div class="clock"><b id="clk">--:--:--</b><span id="clkd">—</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section id="view-tv" role="tabpanel"></section>
+  <section id="view-admin" role="tabpanel" hidden></section>
+  <section id="view-work" role="tabpanel" hidden></section>
+  <section id="view-worker" role="tabpanel" hidden></section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* ============================================================
+   ANANTA MES — prototype dashboard
+   Efficiency% (per hour) = Output × SMV / (Manpower × 60) × 100
+   ============================================================ */
+"use strict";
+const HOURS = ['8–9','9–10','10–11','11–12','12–1','1–2','2–3','3–4','4–5','5–6','6–7'];
+const COMPLETED = 7;                       // hours elapsed "so far today"
+const TOTAL_H = HOURS.length;
+const TARGET_EFF = 78;                      // factory target efficiency %
+const FACTORIES = [
+  {code:'AGL', name:'Ananta Garments Ltd.',  lines:['New-01','New-02','New-10','New-11','New-12','New-15','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O']},
+  {code:'ASL', name:'Ananta Sportswear Ltd.',lines:['New-03','New-08','New-09','New-13','New-14','New-16','P','Q','R','S','T','U','V','W','X','Y','Z','New-04','New-05','New-06','New-07']},
+  {code:'AJL', name:'Ananta — AJL Unit',     lines:['S','T','U','V','W','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R']},
+  {code:'ABM', name:'Ananta — ABM Unit',     lines:['1','2','3','4','5','9','10','11','12','13','17','18','19','20','21','6','7','8','14','15','16']},
+];
+const BUYERS = ['H&M','KMART','LC Waikiki','S&G','ZXY','GTGS','Zara','Primark','C&A','Lindex','Next','Decathlon'];
+const STYLES = ['JAMES TROUSERS S5','RYAN OVERSHIRT S5','TINNA TWISTED TAPERED','MADISON SKINNY HW AL','FERN BARREL HW','KEN CROPPED RIPSTOP','ROBIN DENIM SHIRT MW','CHARLIE CANVAS SHORT','DENIM PANT 1','881559 GIRLS JACKET','PNT SKATER','BARREL 5PKT WO S4','92S27SHO452','MJ6MP344','05S27SLE454'];
+const facColor = c => getComputedStyle(document.documentElement).getPropertyValue('--f-'+c).trim();
+const CSS = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---- deterministic RNG so sample data is stable ---- */
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function rng(seed){let a=seed>>>0;return ()=>{a|=0;a=a+0x9e3779b9|0;let t=a^a>>>16;t=Math.imul(t,0x21f0aaad);t=t^t>>>15;t=Math.imul(t,0x735a2d97);return((t^t>>>15)>>>0)/4294967296}}
+const pick=(r,arr)=>arr[Math.floor(r()*arr.length)];
+const rint=(r,a,b)=>Math.floor(r()*(b-a+1))+a;
+
+/* ---- build the model ---- */
+let LINES=[]; const byId={};
+function build(){
+  LINES=[]; let gi=0;
+  for(const f of FACTORIES){
+    for(const ln of f.lines){
+      const id=f.code+':'+ln, r=rng(hash(id));
+      const smv=+(rint(r,120,440)/10).toFixed(1);
+      const mp=rint(r,55,72);
+      const perf=0.52+r()*0.40;                      // this line's real efficiency level
+      const htOut=TARGET_EFF/100*mp*60/smv;          // output/hr to hit target eff
+      const dayTarget=Math.round(htOut*TOTAL_H/10)*10;
+      const hourly=[], dhu=[];
+      for(let h=0;h<COMPLETED;h++){
+        const noise=0.82+r()*0.30;
+        hourly.push(Math.max(0,Math.round(perf*mp*60/smv*noise)));
+        dhu.push(+(2+r()*6).toFixed(1));
+      }
+      byId[id]={id,factory:f.code,fname:f.name,line:ln,buyer:pick(r,BUYERS),style:pick(r,STYLES),
+        smv,mp,dayTarget,hourly,dhu,order:'AO-'+rint(r,30000,99000)};
+      LINES.push(id); gi++;
+    }
+  }
+  // apply any saved worker overrides
+  try{const o=JSON.parse(localStorage.getItem('ananta_mes')||'{}');
+    for(const k in o){if(byId[k]){byId[k].hourly=o[k].hourly;byId[k].dhu=o[k].dhu}}}catch(e){}
+}
+function save(id){
+  try{const o=JSON.parse(localStorage.getItem('ananta_mes')||'{}');
+    o[id]={hourly:byId[id].hourly,dhu:byId[id].dhu};
+    localStorage.setItem('ananta_mes',JSON.stringify(o));}catch(e){}
+}
+/* ---- derived metrics ---- */
+function metrics(d){
+  const done=d.hourly.length;
+  const achieved=d.hourly.reduce((a,b)=>a+b,0);
+  const effH=d.hourly.map((o,i)=>o*d.smv/(d.mp*60)*100);
+  const avgEff=effH.length?effH.reduce((a,b)=>a+b,0)/effH.length:0;
+  const avgDHU=d.dhu.length?d.dhu.reduce((a,b)=>a+b,0)/d.dhu.length:0;
+  const hourlyTarget=d.dayTarget/TOTAL_H;
+  const paceTarget=hourlyTarget*done;             // where we should be by now
+  const projected=done?Math.round(achieved/done*TOTAL_H):0;
+  const cum=[]; let s=0; d.hourly.forEach(o=>{s+=o;cum.push(s)});
+  return {done,achieved,effH,avgEff,avgDHU,hourlyTarget,paceTarget,projected,cum,
+    pctDay:d.dayTarget?achieved/d.dayTarget*100:0,
+    pctPace:paceTarget?achieved/paceTarget*100:0};
+}
+const statusOf=eff=> eff>=70?'good':eff>=58?'warn':'crit';
+const statusLabel={good:'On Target',warn:'Watch',crit:'Behind'};
+
+/* ============================================================ VIEWS ============================================================ */
+let sel=FACTORIES[0].code+':'+FACTORIES[0].lines[6]; // AGL : A
+const charts={};
+function destroy(k){if(charts[k]){charts[k].destroy();delete charts[k]}}
+
+const chartBase=(extra={})=>({
+  responsive:true,maintainAspectRatio:false,animation:{duration:500},
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#0b1120',borderColor:CSS('--line2'),borderWidth:1,
+    titleColor:CSS('--ink'),bodyColor:CSS('--ink2'),padding:10,cornerRadius:8,displayColors:true,boxWidth:9,boxHeight:9,usePointStyle:true}},
+  ...extra
+});
+const gridCfg=()=>({color:CSS('--line'),drawTicks:false});
+const tickCfg=()=>({color:CSS('--ink3'),font:{family:"'IBM Plex Mono'",size:11}});
+
+/* ---------------- LINE TV ---------------- */
+function renderTV(){
+  const d=byId[sel], m=metrics(d), col=facColor(d.factory), st=statusOf(m.avgEff);
+  const el=document.getElementById('view-tv');
+  el.innerHTML=`
+   <div class="tvhead">
+     <div class="lineid">
+       <div class="lbadge" style="background:linear-gradient(160deg,${col},${col}99)"><span><small>LINE</small>${d.line.replace('New-','N')}</span></div>
+       <div>
+         <h1>${d.factory} · Line ${d.line}</h1>
+         <div class="meta"><span class="pill ${st}"><i></i>${statusLabel[st]}</span>
+           <span>Buyer <b>${d.buyer}</b></span><span>·</span><span>Style <b>${d.style}</b></span>
+           <span>·</span><span>SMV <b>${d.smv}</b></span><span>·</span><span>M/P <b>${d.mp}</b></span></div>
+       </div>
+     </div>
+     <div class="tvsel">
+       <select class="select" id="tvFac">${FACTORIES.map(f=>`<option value="${f.code}" ${f.code===d.factory?'selected':''}>${f.code}</option>`).join('')}</select>
+       <select class="select" id="tvLine">${FACTORIES.find(f=>f.code===d.factory).lines.map(l=>`<option ${l===d.line?'selected':''}>${l}</option>`).join('')}</select>
+       <button class="btn" id="tvRot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12a8 8 0 018-8 8 8 0 017 4M20 4v4h-4M20 12a8 8 0 01-8 8 8 8 0 01-7-4M4 20v-4h4"/></svg>Rotate</button>
+     </div>
+   </div>
+
+   <div class="tvgrid">
+     <div class="kpis">
+       ${kpi('Day Target',fmt(d.dayTarget),'pcs · plan for today',col,'target')}
+       ${kpi('Achieved',fmt(m.achieved),`${m.done} of ${TOTAL_H} hrs · proj. ${fmt(m.projected)}`,col,'ach',m.cum)}
+       ${kpi('Avg Efficiency',m.avgEff.toFixed(1)+'<small style="font-size:.5em"> %</small>',`target ${TARGET_EFF}%`,col,'eff')}
+       ${kpi('Avg D.H.U.',m.avgDHU.toFixed(1)+'<small style="font-size:.5em"> %</small>','defects / hundred units',col,'dhu')}
+     </div>
+
+     <div class="panel card">
+       <h3>Target Against Achieved</h3>
+       <div class="cap">Cumulative output vs. required pace — ${d.dayTarget.toLocaleString()} pcs by hour ${TOTAL_H}</div>
+       <div class="chartbox" style="height:300px"><canvas id="cTA"></canvas></div>
+     </div>
+
+     <div class="panel card">
+       <h3>Current Line Average Efficiency</h3>
+       <div class="cap">Live gauge &amp; hour-by-hour efficiency against the ${TARGET_EFF}% target line</div>
+       <div class="gaugewrap">
+         <div class="gauge">${gaugeSVG(m.avgEff,col,st)}</div>
+         <div class="efflegend">
+           <div class="row"><span class="k">Current avg</span><span class="v" style="color:var(--${st})">${m.avgEff.toFixed(1)}%</span></div>
+           <div class="row"><span class="k">Target</span><span class="v">${TARGET_EFF}.0%</span></div>
+           <div class="row"><span class="k">Best hour</span><span class="v">${Math.max(...m.effH).toFixed(1)}%</span></div>
+           <div class="row"><span class="k">Pace vs plan</span><span class="v" style="color:var(--${statusOf(m.avgEff)})">${m.pctPace.toFixed(0)}%</span></div>
+         </div>
+       </div>
+       <div class="chartbox" style="height:120px;margin-top:6px"><canvas id="cEff"></canvas></div>
+     </div>
+   </div>`;
+
+  // selectors
+  document.getElementById('tvFac').onchange=e=>{const f=FACTORIES.find(x=>x.code===e.target.value);sel=f.code+':'+f.lines[0];renderTV()};
+  document.getElementById('tvLine').onchange=e=>{sel=d.factory+':'+e.target.value;renderTV()};
+  document.getElementById('tvRot').onclick=toggleRotate;
+
+  // chart: target vs achieved (cumulative)
+  const pace=HOURS.map((_,i)=>Math.round(m.hourlyTarget*(i+1)));
+  const ach=m.cum.concat(Array(TOTAL_H-m.done).fill(null));
+  destroy('ta');
+  charts.ta=new Chart(document.getElementById('cTA'),{type:'line',
+    data:{labels:HOURS,datasets:[
+      {label:'Required pace',data:pace,borderColor:CSS('--ink3'),borderWidth:2,borderDash:[5,5],pointRadius:0,tension:.25},
+      {label:'Achieved',data:ach,borderColor:col,borderWidth:3,tension:.3,spanGaps:false,
+        pointRadius:(c)=>c.dataIndex===m.done-1?5:0,pointBackgroundColor:col,pointBorderColor:'#06101d',pointBorderWidth:2,
+        fill:true,backgroundColor:(ctx)=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,300);g.addColorStop(0,col+'55');g.addColorStop(1,col+'04');return g}}
+    ]},
+    options:chartBase({interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'top',align:'end',labels:{color:CSS('--ink2'),usePointStyle:true,pointStyle:'line',boxWidth:22,font:{size:12}}},
+        tooltip:chartBase().plugins.tooltip},
+      scales:{x:{grid:{display:false},ticks:tickCfg()},
+        y:{beginAtZero:true,grid:gridCfg(),ticks:{...tickCfg(),callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v},
+          suggestedMax:Math.max(d.dayTarget,m.projected)}}})});
+
+  // chart: hourly efficiency bars
+  const effData=m.effH.concat(Array(TOTAL_H-m.done).fill(null));
+  destroy('eff');
+  charts.eff=new Chart(document.getElementById('cEff'),{type:'bar',
+    data:{labels:HOURS,datasets:[{data:effData,borderRadius:4,borderSkipped:false,
+      backgroundColor:effData.map(v=>v==null?'transparent':(v>=70?CSS('--good'):v>=58?CSS('--warn'):CSS('--crit')))}]},
+    options:chartBase({plugins:{legend:{display:false},
+        tooltip:{...chartBase().plugins.tooltip,callbacks:{label:c=>' '+c.parsed.y.toFixed(1)+'% efficiency'}},
+        annotation:{}},
+      scales:{x:{grid:{display:false},ticks:{...tickCfg(),font:{size:10}}},
+        y:{beginAtZero:true,suggestedMax:100,grid:gridCfg(),ticks:{...tickCfg(),stepSize:25,callback:v=>v+'%'}}}})});
+  // target line overlay via plugin
+  drawTargetLine('cEff',TARGET_EFF);
+}
+function kpi(label,val,sub,col,key,spark){
+  return `<div class="panel kpi ${key==='ach'?'accent':''}">
+    <div class="eyebrow"><span class="dot" style="background:${col}"></span>${label}</div>
+    <div class="val tnum">${val}</div><div class="sub">${sub}</div>
+    ${spark?`<div class="spark">${sparkSVG(spark,col)}</div>`:''}
+  </div>`;
+}
+function fmt(n){return (n||0).toLocaleString()}
+
+/* gauge: 180° arc */
+function gaugeSVG(val,col,st){
+  const pct=Math.max(0,Math.min(100,val)), R=86,CX=100,CY=100, C=Math.PI*R;
+  const off=C*(1-pct/100);
+  const tx=TARGET_EFF/100, ang=Math.PI*(1-tx), mx=CX+R*Math.cos(ang), my=CY-R*Math.sin(ang);
+  const stC=CSS('--'+st);
+  return `<svg viewBox="0 0 200 118" width="100%">
+    <path d="M14 100 A86 86 0 0 1 186 100" fill="none" stroke="${CSS('--line')}" stroke-width="15" stroke-linecap="round"/>
+    <path d="M14 100 A86 86 0 0 1 186 100" fill="none" stroke="${stC}" stroke-width="15" stroke-linecap="round"
+      stroke-dasharray="${C}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset .6s ease"/>
+    <line x1="${CX+(R-12)*Math.cos(ang)}" y1="${CY-(R-12)*Math.sin(ang)}" x2="${mx}" y2="${my}" stroke="${CSS('--ink')}" stroke-width="2.5"/>
+    <text x="${mx}" y="${my-6}" fill="${CSS('--ink2')}" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">TGT ${TARGET_EFF}</text>
+    <text x="100" y="92" text-anchor="middle" font-family="Barlow Semi Condensed" font-weight="700" font-size="40" fill="${stC}">${val.toFixed(1)}</text>
+    <text x="100" y="110" text-anchor="middle" font-size="10" letter-spacing="2" fill="${CSS('--ink3')}">PERCENT</text>
+  </svg>`;
+}
+function sparkSVG(arr,col){
+  const w=120,h=40,mx=Math.max(...arr,1);
+  const pts=arr.map((v,i)=>`${(i/(arr.length-1))*w},${h-(v/mx)*(h-6)-3}`).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none"><polyline points="${pts}" stroke="${col}" stroke-width="2" opacity=".7"/></svg>`;
+}
+function drawTargetLine(canvasId,yVal){
+  const ch=Object.values(charts).find(c=>c.canvas&&c.canvas.id===canvasId); if(!ch)return;
+  const plugin={id:'tl',afterDraw(c){const y=c.scales.y.getPixelForValue(yVal),a=c.chartArea,ctx=c.ctx;
+    ctx.save();ctx.strokeStyle=CSS('--accent');ctx.setLineDash([4,4]);ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(a.left,y);ctx.lineTo(a.right,y);ctx.stroke();ctx.restore()}};
+  ch.options.plugins=ch.options.plugins||{};ch.config.plugins=ch.config.plugins||[];
+  if(!ch._tl){ch._tl=true;Chart.register(plugin);ch.update('none')}
+}
+
+/* rotate through lines on TV */
+let rotT=null;
+function toggleRotate(){
+  const b=document.getElementById('tvRot');
+  if(rotT){clearInterval(rotT);rotT=null;b.classList.remove('primary');b.lastChild.textContent='Rotate';return}
+  b.classList.add('primary');b.lastChild.textContent='Stop';
+  rotT=setInterval(()=>{let i=LINES.indexOf(sel);sel=LINES[(i+1)%LINES.length];if(current==='tv')renderTV();else{clearInterval(rotT);rotT=null}},6000);
+}
+
+/* ---------------- SUPER ADMIN ---------------- */
+let adminFilter='ALL', sortKey='eff', sortDir=-1;
+function renderAdmin(){
+  const el=document.getElementById('view-admin');
+  const facStats=FACTORIES.map(f=>{
+    const ls=f.lines.map(l=>byId[f.code+':'+l]);
+    let tgt=0,ach=0,eff=0,dhu=0;
+    ls.forEach(d=>{const m=metrics(d);tgt+=d.dayTarget;ach+=m.achieved;eff+=m.avgEff;dhu+=m.avgDHU});
+    return {f,tgt,ach,eff:eff/ls.length,dhu:dhu/ls.length,n:ls.length,proj:ls.reduce((a,d)=>a+metrics(d).projected,0)};
+  });
+  const tot=facStats.reduce((a,s)=>({tgt:a.tgt+s.tgt,ach:a.ach+s.ach,n:a.n+s.n}),{tgt:0,ach:0,n:0});
+  const totEff=facStats.reduce((a,s)=>a+s.eff*s.n,0)/tot.n;
+
+  el.innerHTML=`
+   <div class="sectitle"><h2>Factory Overview</h2><div class="ln"></div>
+     <span class="eyebrow">${tot.n} lines · 4 factories · hour ${COMPLETED}/${TOTAL_H}</span></div>
+   <div class="facgrid">
+     ${facStats.map(s=>{const pct=s.ach/s.tgt*100,st=statusOf(s.eff);return `
+       <div class="panel faccard" data-fac="${s.f.code}">
+         <div class="top"><div><div class="fcode"><span class="dot" style="background:${facColor(s.f.code)}"></span>${s.f.code}</div>
+           <div class="fname">${s.f.name}</div></div><span class="pill ${st}"><i></i>${s.eff.toFixed(0)}%</span></div>
+         <div class="big tnum">${fmt(s.ach)} <small>/ ${fmt(s.tgt)}</small></div>
+         <div class="barbg"><div class="barfl" style="width:${Math.min(100,pct)}%;background:${facColor(s.f.code)}"></div></div>
+         <div class="foot"><span>${s.n} lines</span><span>Eff <b>${s.eff.toFixed(1)}%</b></span><span>DHU <b>${s.dhu.toFixed(1)}%</b></span><span>Proj <b>${fmt(s.proj)}</b></span></div>
+       </div>`}).join('')}
+   </div>
+
+   <div class="dash2">
+     <div class="panel card"><h3>Achieved vs. Day Target</h3><div class="cap">By factory — output so far against today's plan</div>
+       <div class="chartbox" style="height:260px"><canvas id="cFac"></canvas></div></div>
+     <div class="panel card"><h3>Average Efficiency</h3><div class="cap">By factory vs. ${TARGET_EFF}% target</div>
+       <div class="chartbox" style="height:260px"><canvas id="cFacEff"></canvas></div></div>
+   </div>
+
+   <div class="sectitle"><h2>Line-wise Output</h2><div class="ln"></div></div>
+   <div class="filters" id="facFilter">
+     <button class="chip c-all" data-f="ALL" aria-pressed="true">All factories</button>
+     ${FACTORIES.map(f=>`<button class="chip" data-f="${f.code}" aria-pressed="false"><span class="dot" style="background:${facColor(f.code)}"></span>${f.code}</button>`).join('')}
+     <span class="note" style="margin-left:auto">Click a column to sort · click a line to open its TV board</span>
+   </div>
+   <div class="panel tablewrap">
+     <table id="lineTbl"><thead><tr>
+       ${th('Line','line')}${th('Factory','factory')}${th('Buyer','buyer')}${th('Style','style')}
+       ${th('SMV','smv')}${th('M/P','mp')}${th('Target','dayTarget')}${th('Achieved','achieved')}
+       <th class="sortable" data-k="pace">Pace</th>${th('Eff %','eff')}${th('DHU %','dhu')}<th>Status</th>
+     </tr></thead><tbody></tbody></table>
+   </div>`;
+
+  el.querySelectorAll('.faccard').forEach(c=>c.onclick=()=>{adminFilter=c.dataset.fac;current='admin';
+    document.querySelectorAll('#facFilter .chip').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===adminFilter));
+    fillTable()});
+  el.querySelectorAll('#facFilter .chip').forEach(c=>c.onclick=()=>{adminFilter=c.dataset.f;
+    el.querySelectorAll('#facFilter .chip').forEach(x=>x.setAttribute('aria-pressed',x.dataset.f===adminFilter));fillTable()});
+  el.querySelectorAll('th.sortable').forEach(h=>h.onclick=()=>{const k=h.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1}fillTable()});
+  fillTable();
+
+  // charts
+  const labels=facStats.map(s=>s.f.code), cols=labels.map(facColor);
+  destroy('fac');
+  charts.fac=new Chart(document.getElementById('cFac'),{type:'bar',
+    data:{labels,datasets:[
+      {label:'Day Target',data:facStats.map(s=>s.tgt),backgroundColor:CSS('--line2'),borderRadius:4,borderSkipped:false,barPercentage:.62,categoryPercentage:.7},
+      {label:'Achieved',data:facStats.map(s=>s.ach),backgroundColor:cols,borderRadius:4,borderSkipped:false,barPercentage:.62,categoryPercentage:.7}
+    ]},
+    options:chartBase({plugins:{legend:{display:true,position:'top',align:'end',labels:{color:CSS('--ink2'),usePointStyle:true,boxWidth:9,font:{size:12}}},tooltip:chartBase().plugins.tooltip},
+      scales:{x:{grid:{display:false},ticks:tickCfg()},y:{beginAtZero:true,grid:gridCfg(),ticks:{...tickCfg(),callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}}})});
+  destroy('faceff');
+  charts.faceff=new Chart(document.getElementById('cFacEff'),{type:'bar',
+    data:{labels,datasets:[{data:facStats.map(s=>+s.eff.toFixed(1)),backgroundColor:cols,borderRadius:4,borderSkipped:false,barPercentage:.5}]},
+    options:chartBase({plugins:{legend:{display:false},tooltip:{...chartBase().plugins.tooltip,callbacks:{label:c=>' '+c.parsed.y+'% avg efficiency'}}},
+      scales:{x:{grid:{display:false},ticks:tickCfg()},y:{beginAtZero:true,suggestedMax:100,grid:gridCfg(),ticks:{...tickCfg(),stepSize:25,callback:v=>v+'%'}}}})});
+  drawTargetLine('cFacEff',TARGET_EFF);
+}
+function th(label,k){return `<th class="sortable" data-k="${k}">${label} <span class="ar">${sortKey===k?(sortDir<0?'▼':'▲'):''}</span></th>`}
+function fillTable(){
+  const rows=LINES.map(id=>{const d=byId[id],m=metrics(d);return{d,m,
+    line:d.line,factory:d.factory,buyer:d.buyer,style:d.style,smv:d.smv,mp:d.mp,
+    dayTarget:d.dayTarget,achieved:m.achieved,eff:m.avgEff,dhu:m.avgDHU,pace:m.pctPace}})
+    .filter(r=>adminFilter==='ALL'||r.factory===adminFilter);
+  rows.sort((a,b)=>{let x=a[sortKey],y=b[sortKey];if(typeof x==='string')return x.localeCompare(y)*sortDir;return (x-y)*sortDir});
+  const tb=document.querySelector('#lineTbl tbody');
+  tb.innerHTML=rows.map(r=>{const st=statusOf(r.eff),col=facColor(r.factory),pct=Math.min(100,r.achieved/r.dayTarget*100);
+    return `<tr>
+      <td><span class="linetag"><span class="dot" style="background:${col}"></span><span class="rowlink" data-id="${r.d.id}">${r.line}</span></span></td>
+      <td style="color:var(--ink2)">${r.factory}</td><td>${r.buyer}</td><td style="color:var(--ink2);max-width:180px;overflow:hidden;text-overflow:ellipsis">${r.style}</td>
+      <td class="num">${r.smv}</td><td class="num">${r.mp}</td><td class="num">${fmt(r.dayTarget)}</td>
+      <td class="num">${fmt(r.achieved)}<span class="mini" style="margin-left:7px"><i style="width:${pct}%;background:${col}"></i></span></td>
+      <td class="num" style="color:var(--${statusOf(r.pace>=100?70:r.pace>=85?60:0)})">${r.pace.toFixed(0)}%</td>
+      <td class="num" style="color:var(--${st});font-weight:600">${r.eff.toFixed(1)}</td>
+      <td class="num">${r.dhu.toFixed(1)}</td>
+      <td><span class="pill ${st}"><i></i>${statusLabel[st]}</span></td>
+    </tr>`}).join('');
+  tb.querySelectorAll('.rowlink').forEach(a=>a.onclick=()=>{sel=a.dataset.id;switchView('tv')});
+}
+
+/* ---------------- WORK STUDY INPUT ---------------- */
+let wsFac=FACTORIES[0].code, wsLine=FACTORIES[0].lines[0];
+function renderWork(){
+  const el=document.getElementById('view-work');
+  const d=byId[wsFac+':'+wsLine];
+  const today=new Date().toISOString().slice(0,10);
+  el.innerHTML=`
+   <div class="sectitle"><h2>Work Study — Daily Line Plan</h2><div class="ln"></div>
+     <span class="eyebrow">Input by Work Study</span></div>
+   <div class="form2">
+     <div class="panel card">
+       <div class="frow">
+         <div class="field"><label>Date</label><input class="inp" type="date" id="wsDate" value="${today}"></div>
+         <div class="field"><label>Factory</label><select class="select" id="wsFac">${FACTORIES.map(f=>`<option value="${f.code}" ${f.code===wsFac?'selected':''}>${f.code} — ${f.name}</option>`).join('')}</select></div>
+       </div>
+       <div class="field"><label>Line</label><select class="select" id="wsLine">${FACTORIES.find(f=>f.code===wsFac).lines.map(l=>`<option ${l===wsLine?'selected':''}>Line ${l}</option>`).join('')}</select></div>
+       <div class="frow">
+         <div class="field"><label>Buyer</label><select class="select" id="wsBuyer">${BUYERS.map(b=>`<option ${b===d.buyer?'selected':''}>${b}</option>`).join('')}</select></div>
+         <div class="field"><label>Style</label><input class="inp" id="wsStyle" value="${d.style}"></div>
+       </div>
+       <div class="frow">
+         <div class="field"><label>SMV</label><input class="inp tnum" id="wsSmv" type="number" step="0.1" value="${d.smv}"></div>
+         <div class="field"><label>Manpower (M/P)</label><input class="inp tnum" id="wsMp" type="number" value="${d.mp}"></div>
+       </div>
+       <div class="field"><label>Day Target (pcs)</label><input class="inp tnum" id="wsTgt" type="number" value="${d.dayTarget}"></div>
+       <button class="btn primary" id="wsSave"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>Save line plan</button>
+       <p class="note">Saving sets the targets the Line Worker screen and TV boards calculate against.</p>
+     </div>
+     <div class="panel card">
+       <h3>Derived Plan</h3><div class="cap">Auto-calculated from the figures on the left</div>
+       <div class="efflegend">
+         <div class="row"><span class="k">Hourly target</span><span class="v" id="dHt">—</span></div>
+         <div class="row"><span class="k">Target efficiency</span><span class="v" id="dTe">—</span></div>
+         <div class="row"><span class="k">Std. minutes produced / day</span><span class="v" id="dSm">—</span></div>
+         <div class="row"><span class="k">Available minutes / day</span><span class="v" id="dAm">—</span></div>
+       </div>
+       <div style="margin-top:16px" class="eyebrow">Target efficiency formula</div>
+       <div style="font-family:var(--mono);font-size:12.5px;color:var(--ink2);margin-top:7px;line-height:1.7">
+         Eff% = (Target × SMV) ÷ (M/P × 60 × ${TOTAL_H} hrs) × 100</div>
+     </div>
+   </div>`;
+  const g=id=>document.getElementById(id);
+  function recalc(){const smv=+g('wsSmv').value,mp=+g('wsMp').value,tgt=+g('wsTgt').value;
+    const avail=mp*60*TOTAL_H, std=tgt*smv, te=avail?std/avail*100:0;
+    g('dHt').textContent=Math.round(tgt/TOTAL_H)+' pcs';g('dTe').textContent=te.toFixed(1)+'%';
+    g('dSm').textContent=fmt(Math.round(std))+' min';g('dAm').textContent=fmt(avail)+' min';
+    g('dTe').style.color='var(--'+statusOf(te)+')';}
+  ['wsSmv','wsMp','wsTgt'].forEach(i=>g(i).oninput=recalc); recalc();
+  g('wsFac').onchange=e=>{wsFac=e.target.value;wsLine=FACTORIES.find(f=>f.code===wsFac).lines[0];renderWork()};
+  g('wsLine').onchange=e=>{wsLine=e.target.value.replace('Line ','');renderWork()};
+  g('wsBuyer').onchange=e=>d.buyer=e.target.value;
+  g('wsStyle').oninput=e=>d.style=e.target.value;
+  g('wsSave').onclick=()=>{d.smv=+g('wsSmv').value;d.mp=+g('wsMp').value;d.dayTarget=+g('wsTgt').value;
+    d.buyer=g('wsBuyer').value;d.style=g('wsStyle').value;save(d.id);toast('Line plan saved for '+wsFac+' · Line '+wsLine)};
+}
+
+/* ---------------- LINE WORKER INPUT ---------------- */
+let wkFac=FACTORIES[0].code, wkLine=FACTORIES[0].lines[6];
+function renderWorker(){
+  const el=document.getElementById('view-worker');
+  const d=byId[wkFac+':'+wkLine];
+  el.innerHTML=`
+   <div class="sectitle"><h2>Line Worker — Hourly Entry</h2><div class="ln"></div><span class="eyebrow">Input by Line Worker</span></div>
+   <div class="form2">
+     <div class="panel card">
+       <div class="frow">
+         <div class="field"><label>Factory</label><select class="select" id="wkFac">${FACTORIES.map(f=>`<option value="${f.code}" ${f.code===wkFac?'selected':''}>${f.code}</option>`).join('')}</select></div>
+         <div class="field"><label>Line</label><select class="select" id="wkLine">${FACTORIES.find(f=>f.code===wkFac).lines.map(l=>`<option ${l===wkLine?'selected':''}>Line ${l}</option>`).join('')}</select></div>
+       </div>
+       <div class="eyebrow" style="margin:6px 0 8px">After selecting the line, this comes automatically</div>
+       <div class="frow">
+         <div class="field"><label>Buyer</label><input class="inp auto" value="${d.buyer}" readonly></div>
+         <div class="field"><label>Style</label><input class="inp auto" value="${d.style}" readonly></div>
+       </div>
+       <div class="frow">
+         <div class="field"><label>SMV</label><input class="inp auto tnum" value="${d.smv}" readonly></div>
+         <div class="field"><label>Manpower</label><input class="inp auto tnum" value="${d.mp}" readonly></div>
+       </div>
+       <div class="field"><label>Daily Target</label><input class="inp auto tnum" value="${d.dayTarget}" readonly></div>
+       <p class="note">Efficiency auto-calculates: <span style="font-family:var(--mono)">Output × SMV ÷ (M/P × 60)</span></p>
+     </div>
+
+     <div class="panel card" style="overflow-x:auto">
+       <h3>Hourly Output &amp; D.H.U.</h3><div class="cap">Enter output and defects per hour — efficiency updates live</div>
+       <table class="hourtbl" style="min-width:420px"><thead><tr>
+         <th style="text-align:left;color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.08em">Hour</th>
+         <th style="color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.08em">Output</th>
+         <th style="color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.08em">D.H.U.</th>
+         <th style="text-align:right;color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.08em">Eff %</th></tr></thead>
+         <tbody id="wkBody"></tbody>
+         <tfoot><tr style="border-top:2px solid var(--line2)">
+           <td style="font-weight:700;color:var(--ink);padding-top:11px">TOTAL</td>
+           <td class="effc" id="wkTotOut" style="color:var(--ink)"></td>
+           <td class="effc" id="wkTotDhu" style="color:var(--ink)"></td>
+           <td class="effc" id="wkTotEff"></td></tr></tfoot>
+       </table>
+       <div style="display:flex;gap:10px;margin-top:14px">
+         <button class="btn primary" id="wkSave"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>Save &amp; update boards</button>
+         <button class="btn" id="wkTV">Open TV board →</button>
+       </div>
+     </div>
+   </div>`;
+  const g=id=>document.getElementById(id);
+  function rows(){
+    const body=g('wkBody');
+    body.innerHTML=HOURS.map((h,i)=>{
+      const o=d.hourly[i]??'', dh=d.dhu[i]??'';
+      return `<tr><td style="color:var(--ink2);font-family:var(--mono);font-size:12.5px">${h}</td>
+        <td><input data-i="${i}" data-t="o" inputmode="numeric" value="${o}"></td>
+        <td><input data-i="${i}" data-t="d" inputmode="decimal" value="${dh}"></td>
+        <td class="effc" id="eff${i}">—</td></tr>`}).join('');
+    body.querySelectorAll('input').forEach(inp=>inp.oninput=()=>{
+      const i=+inp.dataset.i;
+      // ensure array length
+      while(d.hourly.length<=i){d.hourly.push(0);d.dhu.push(0)}
+      if(inp.dataset.t==='o')d.hourly[i]=inp.value===''?0:+inp.value; else d.dhu[i]=inp.value===''?0:+inp.value;
+      recalc();});
+    recalc();
+  }
+  function recalc(){
+    let tot=0,neff=0,seff=0,sd=0,nd=0;
+    HOURS.forEach((h,i)=>{
+      const o=d.hourly[i], c=g('eff'+i); if(c==null)return;
+      if(o==null||o===''||i>=d.hourly.length||(o===0&&(d.hourly[i]===undefined))){c.textContent='—';c.style.color='var(--ink3)';return}
+      const e=o*d.smv/(d.mp*60)*100; tot+=o; seff+=e;neff++;
+      if(d.dhu[i]!=null){sd+=d.dhu[i];nd++}
+      c.textContent=e.toFixed(1);c.style.color='var(--'+statusOf(e)+')';
+    });
+    g('wkTotOut').textContent=fmt(tot);
+    g('wkTotDhu').textContent=nd?(sd/nd).toFixed(1):'—';
+    const ae=neff?seff/neff:0; g('wkTotEff').textContent=ae.toFixed(1)+'%';g('wkTotEff').style.color='var(--'+statusOf(ae)+')';
+  }
+  rows();
+  g('wkFac').onchange=e=>{wkFac=e.target.value;wkLine=FACTORIES.find(f=>f.code===wkFac).lines[0];renderWorker()};
+  g('wkLine').onchange=e=>{wkLine=e.target.value.replace('Line ','');renderWorker()};
+  g('wkSave').onclick=()=>{d.hourly=d.hourly.slice(0,HOURS.length);save(d.id);toast('Saved — '+wkFac+' · Line '+wkLine+' boards updated')};
+  g('wkTV').onclick=()=>{sel=d.id;switchView('tv')};
+}
+
+/* ---------------- shell ---------------- */
+let current='tv';
+const views={tv:renderTV,admin:renderAdmin,work:renderWork,worker:renderWorker};
+function switchView(v){
+  current=v;
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.view===v));
+  ['tv','admin','work','worker'].forEach(x=>document.getElementById('view-'+x).hidden=(x!==v));
+  if(rotT&&v!=='tv'){clearInterval(rotT);rotT=null}
+  views[v]();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchView(t.dataset.view));
+
+function toast(msg){const t=document.getElementById('toast');
+  t.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>'+msg;
+  t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2600);}
+
+function tick(){const n=new Date();
+  document.getElementById('clk').textContent=n.toLocaleTimeString('en-GB');
+  document.getElementById('clkd').textContent=n.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}
+
+build(); tick(); setInterval(tick,1000); switchView('tv');
+</script>

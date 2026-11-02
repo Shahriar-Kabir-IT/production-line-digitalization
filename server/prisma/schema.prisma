@@ -1,0 +1,139 @@
+// Ananta MES — data model
+// Database and app are separate: this schema owns the DB; the API talks to it via Prisma.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN // all factories — master dashboard (logs in)
+  WORK_STUDY  // one factory — plan entry + factory dashboard (logs in)
+  LINE_WORKER // legacy authorship; the QC station is now a no-login kiosk
+}
+
+model Factory {
+  id        String   @id @default(cuid())
+  code      String   @unique // AGL, ASL, AJL, ABM
+  name      String
+  lines     Line[]
+  users     User[]
+  createdAt DateTime @default(now())
+}
+
+model Line {
+  id         String          @id @default(cuid())
+  name       String // "A", "New-01", "12" ...
+  isActive   Boolean         @default(true)
+  factory    Factory         @relation(fields: [factoryId], references: [id], onDelete: Cascade)
+  factoryId  String
+  workers    User[]
+  plans      WorkStudyPlan[]
+  createdAt  DateTime        @default(now())
+
+  @@unique([factoryId, name])
+  @@index([factoryId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique // login identifier (no email login)
+  email        String?  @unique
+  name         String
+  passwordHash String
+  role         Role
+  factory      Factory? @relation(fields: [factoryId], references: [id])
+  factoryId    String?
+  line         Line?    @relation(fields: [lineId], references: [id])
+  lineId       String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  plans        WorkStudyPlan[] @relation("PlanAuthor")
+}
+
+model Buyer {
+  id    String          @id @default(cuid())
+  name  String          @unique
+  plans WorkStudyPlan[]
+}
+
+// Master list of defect codes shown as tally buttons on the QC station.
+model DefectCode {
+  code      String        @id // "B", "SK", "OV" ...
+  name      String
+  sortOrder Int           @default(0)
+  active    Boolean       @default(true)
+  tallies   HourlyDefect[]
+}
+
+// One daily plan per line per date (the Work Study input).
+model WorkStudyPlan {
+  id           String        @id @default(cuid())
+  line         Line          @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  lineId       String
+  date         DateTime      @db.Date
+  buyer        Buyer?        @relation(fields: [buyerId], references: [id])
+  buyerId      String?
+  buyerName    String
+  style        String
+  smv          Float
+  manpower     Int
+  dayTarget    Int
+  plannedHours Int           @default(11)
+  author       User?         @relation("PlanAuthor", fields: [authorId], references: [id])
+  authorId     String?
+  entries      HourlyEntry[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([lineId, date])
+  @@index([date])
+}
+
+// One row per worked hour (filled at the QC station).
+// checkedQty is the inspected/produced quantity for the hour (end-line checks 100%,
+// so checked == output). Defects are tallied per code in HourlyDefect.
+model HourlyEntry {
+  id         String        @id @default(cuid())
+  plan       WorkStudyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId     String
+  hourIndex  Int // 0-based slot within plannedHours
+  hourLabel  String // "8–9", "9–10" ...
+  checkedQty Int           @default(0)
+  defects    HourlyDefect[]
+  updatedAt  DateTime      @updatedAt
+  createdAt  DateTime      @default(now())
+
+  @@unique([planId, hourIndex])
+  @@index([planId])
+}
+
+// Per-hour count for a single defect code.
+model HourlyDefect {
+  id       String      @id @default(cuid())
+  entry    HourlyEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId  String
+  code     String
+  defect   DefectCode  @relation(fields: [code], references: [code])
+  count    Int         @default(0)
+
+  @@unique([entryId, code])
+  @@index([code])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
