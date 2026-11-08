@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
-import { asyncHandler } from '../../utils/http';
-import { normalizeDate, getLineBoard } from '../dashboard/dashboard.service';
+import { asyncHandler, AppError } from '../../utils/http';
+import { normalizeDate, getLineBoard, listPms, getPmDashboard } from '../dashboard/dashboard.service';
+import { Role } from '@prisma/client';
 import { getStation, adjustCheck, adjustDefect } from './station.service';
+import { getOrRegisterDevice, lockDevice, lockDeviceToPm } from '../sysadmin/device.service';
+import { clientIp } from '../../lib/ip';
 
 // No-login kiosk endpoints: the QC station and the TV board.
 export const publicRouter = Router();
@@ -35,6 +38,18 @@ publicRouter.get(
   }),
 );
 
+// PM boards (public TV): list PMs, and one PM's dashboard.
+publicRouter.get('/pms', asyncHandler(async (_req, res) => res.json({ pms: await listPms() })));
+
+publicRouter.get(
+  '/pm/:pmId/dashboard',
+  asyncHandler(async (req, res) => {
+    const pm = await prisma.user.findFirst({ where: { id: req.params.pmId, role: Role.PRODUCTION_MANAGER } });
+    if (!pm) throw new AppError(404, 'Production Manager not found');
+    res.json(await getPmDashboard({ id: pm.id, name: pm.name, factoryId: pm.factoryId }, normalizeDate(req.query.date as string | undefined)));
+  }),
+);
+
 // QC station snapshot (plan, per-hour counters/defects, lock state, defect codes).
 publicRouter.get(
   '/station/:lineId',
@@ -58,5 +73,39 @@ publicRouter.post(
   asyncHandler(async (req, res) => {
     const b = defectSchema.parse(req.body);
     res.json(await adjustDefect(req.params.lineId, b.date, b.hourIndex, b.code, b.delta));
+  }),
+);
+
+// ---- device (kiosk) lock ----
+const deviceIdSchema = z.string().min(6).max(80);
+
+// Register / refresh this station device and return its lock state.
+publicRouter.get(
+  '/device/:deviceId',
+  asyncHandler(async (req, res) => {
+    const id = deviceIdSchema.parse(req.params.deviceId);
+    res.json(await getOrRegisterDevice(id, clientIp(req), typeof req.query.name === 'string' ? req.query.name : undefined));
+  }),
+);
+
+// Station locks itself to a line (only a SYS_ADMIN can unlock later).
+const lockSchema = z.object({ lineId: z.string().min(1), name: z.string().max(80).optional() });
+publicRouter.post(
+  '/device/:deviceId/lock',
+  asyncHandler(async (req, res) => {
+    const id = deviceIdSchema.parse(req.params.deviceId);
+    const b = lockSchema.parse(req.body);
+    res.json(await lockDevice(id, b.lineId, clientIp(req), b.name));
+  }),
+);
+
+// PM-board TV locks itself to a Production Manager (only a SYS_ADMIN can unlock).
+const lockPmSchema = z.object({ pmId: z.string().min(1), name: z.string().max(80).optional() });
+publicRouter.post(
+  '/device/:deviceId/lock-pm',
+  asyncHandler(async (req, res) => {
+    const id = deviceIdSchema.parse(req.params.deviceId);
+    const b = lockPmSchema.parse(req.body);
+    res.json(await lockDeviceToPm(id, b.pmId, clientIp(req), b.name));
   }),
 );

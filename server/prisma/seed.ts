@@ -1,6 +1,6 @@
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { FACTORY_MAP, HOUR_LABELS, DEFECT_CODES } from '../src/lib/constants';
+import { FACTORY_MAP, HOUR_LABELS, DEFECT_CODES, PM_ALLOCATION, pmUsername } from '../src/lib/constants';
 import { hourState, nowInFactoryTz } from '../src/lib/lock';
 
 const prisma = new PrismaClient();
@@ -44,6 +44,13 @@ async function main() {
     where: { username: 'admin' },
     update: { passwordHash: pwHash, role: Role.SUPER_ADMIN },
     create: { username: 'admin', name: 'Master Admin', passwordHash: pwHash, role: Role.SUPER_ADMIN },
+  });
+
+  const sysHash = await bcrypt.hash('1234', 10);
+  await prisma.user.upsert({
+    where: { username: 'sysadmin' },
+    update: { passwordHash: sysHash, role: Role.SYS_ADMIN, name: 'System Administrator' },
+    create: { username: 'sysadmin', name: 'System Administrator', passwordHash: sysHash, role: Role.SYS_ADMIN },
   });
 
   const codes = DEFECT_CODES.map((d) => d.code);
@@ -104,6 +111,21 @@ async function main() {
           });
         }
       }
+    }
+  }
+
+  // Production Managers + their line allocation
+  for (const alloc of PM_ALLOCATION) {
+    const factory = await prisma.factory.findUnique({ where: { code: alloc.factory } });
+    if (!factory) continue;
+    const username = pmUsername(alloc.factory, alloc.pm);
+    const pmUser = await prisma.user.upsert({
+      where: { username },
+      update: { factoryId: factory.id, role: Role.PRODUCTION_MANAGER, name: `${alloc.pm} — ${alloc.factory}`, passwordHash: pwHash },
+      create: { username, name: `${alloc.pm} — ${alloc.factory}`, passwordHash: pwHash, role: Role.PRODUCTION_MANAGER, factoryId: factory.id },
+    });
+    for (const lineName of alloc.lines) {
+      await prisma.line.updateMany({ where: { factoryId: factory.id, name: lineName }, data: { pmUserId: pmUser.id } });
     }
   }
 

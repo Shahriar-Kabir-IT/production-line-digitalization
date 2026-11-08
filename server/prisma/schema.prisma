@@ -11,9 +11,11 @@ datasource db {
 }
 
 enum Role {
-  SUPER_ADMIN // all factories — master dashboard (logs in)
-  WORK_STUDY  // one factory — plan entry + factory dashboard (logs in)
-  LINE_WORKER // legacy authorship; the QC station is now a no-login kiosk
+  SUPER_ADMIN        // all factories — master dashboard (logs in)
+  WORK_STUDY         // one factory — plan entry + factory dashboard (logs in)
+  LINE_WORKER        // legacy authorship; the QC station is now a no-login kiosk
+  SYS_ADMIN          // manages station devices (lock/unlock) + system
+  PRODUCTION_MANAGER // a set of assigned lines — PM dashboard (logs in)
 }
 
 model Factory {
@@ -33,10 +35,34 @@ model Line {
   factoryId  String
   workers    User[]
   plans      WorkStudyPlan[]
+  devices    Device[]
+  pm         User?           @relation("LinePM", fields: [pmUserId], references: [id])
+  pmUserId   String?
   createdAt  DateTime        @default(now())
 
   @@unique([factoryId, name])
   @@index([factoryId])
+  @@index([pmUserId])
+}
+
+// A station PC. Identified by a browser-generated id stored on that device.
+// When locked, the station only allows entry for `lockedLine`; only a
+// SYS_ADMIN can unlock it.
+model Device {
+  id           String   @id // client-generated device id (stored in localStorage)
+  name         String?
+  ipAddress    String? // the PC's network address — the anti-tamper anchor for the lock
+  locked       Boolean  @default(false)
+  lockedLine   Line?    @relation(fields: [lockedLineId], references: [id])
+  lockedLineId String? // a QC-station PC locked to one line
+  lockedPm     User?    @relation("DevicePM", fields: [lockedPmId], references: [id])
+  lockedPmId   String? // a PM-board TV locked to one Production Manager
+  lastSeen     DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([lockedLineId])
+  @@index([lockedPmId])
+  @@index([ipAddress])
 }
 
 model User {
@@ -53,7 +79,9 @@ model User {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  plans        WorkStudyPlan[] @relation("PlanAuthor")
+  plans         WorkStudyPlan[] @relation("PlanAuthor")
+  managedLines  Line[]          @relation("LinePM")
+  lockedDevices Device[]        @relation("DevicePM")
 }
 
 model Buyer {

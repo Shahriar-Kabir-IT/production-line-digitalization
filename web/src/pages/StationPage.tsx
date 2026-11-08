@@ -1,8 +1,9 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { usePublicFactories, useStation } from '../api/hooks';
+import { usePublicFactories, useStation, useDevice, useLockDevice } from '../api/hooks';
 import client from '../api/client';
 import { fmt, facVar } from '../lib/format';
+import { getDeviceId } from '../lib/device';
 import { Loading, useToast } from '../components/ui';
 import type { HourState, Station } from '../api/types';
 
@@ -13,10 +14,21 @@ export default function StationPage() {
   const toast = useToast();
   const qc = useQueryClient();
   const factories = usePublicFactories();
-  const [lineId, setLineId] = useState<string>(() => localStorage.getItem(LS_KEY) || '');
+  const deviceId = useMemo(getDeviceId, []);
+  const device = useDevice(deviceId);
+  const lockDevice = useLockDevice(deviceId);
+
+  const isLocked = !!device.data?.locked && !!device.data?.lockedLineId;
+  const lockedLineId = device.data?.lockedLineId ?? null;
+
+  const [pickedLineId, setPickedLineId] = useState<string>(() => localStorage.getItem(LS_KEY) || '');
   const [factoryId, setFactoryId] = useState<string>('');
 
-  useEffect(() => { if (lineId) localStorage.setItem(LS_KEY, lineId); }, [lineId]);
+  // When locked, the line is forced to the device's locked line.
+  const lineId = isLocked ? lockedLineId! : pickedLineId;
+  const setLineId = setPickedLineId;
+
+  useEffect(() => { if (pickedLineId) localStorage.setItem(LS_KEY, pickedLineId); }, [pickedLineId]);
   useEffect(() => {
     if (factories.data && !factoryId) {
       const f = factories.data.find((x) => x.lines.some((l) => l.id === lineId)) || factories.data[0];
@@ -38,7 +50,8 @@ export default function StationPage() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const tag = (document.activeElement as HTMLElement | null)?.tagName;
-      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+      // Only real text/select inputs keep native arrow behavior; a focused button must not swallow it.
+      if (tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA') return;
       const { openIdx, kC, bump } = kbRef.current;
       if (openIdx < 0) return;
       if (e.key === 'ArrowDown' || e.key === '+' || e.key === '=') { e.preventDefault(); bump(kC, 1); }
@@ -85,10 +98,29 @@ export default function StationPage() {
     }
   }
 
-  if (factories.isLoading) return <div className="page"><Loading /></div>;
+  if (factories.isLoading || device.isLoading) return <div className="page"><Loading /></div>;
   const currentFactory = factories.data?.find((f) => f.id === factoryId);
+  const pickedLine = currentFactory?.lines.find((l) => l.id === pickedLineId);
 
-  const Selector = (
+  async function doLock() {
+    if (!pickedLineId || !currentFactory || !pickedLine) return;
+    try {
+      await lockDevice.mutateAsync({ lineId: pickedLineId, name: `${currentFactory.code} · Line ${pickedLine.name}` });
+      toast('Station locked to this line');
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Could not lock', 'err');
+    }
+  }
+
+  const Selector = isLocked ? (
+    <div className="card pad lock-banner" style={{ marginBottom: 16 }}>
+      <div className="lb-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg></div>
+      <div style={{ flex: 1 }}>
+        <b>Station locked to {device.data?.factory} · Line {device.data?.line}</b>
+        <span className="muted">Only the System Administrator can change or unlock this PC.</span>
+      </div>
+    </div>
+  ) : (
     <div className="card pad" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
       <div className="field"><label>Factory</label>
         <select className="select" value={factoryId} onChange={(e) => setFactoryId(e.target.value)} style={{ minWidth: 220 }}>
@@ -96,18 +128,24 @@ export default function StationPage() {
         </select>
       </div>
       <div className="field"><label>Line</label>
-        <select className="select" value={lineId} onChange={(e) => { setLineId(e.target.value); e.target.blur(); }} style={{ minWidth: 160 }}>
+        <select className="select" value={pickedLineId} onChange={(e) => { setLineId(e.target.value); e.target.blur(); }} style={{ minWidth: 160 }}>
           <option value="">Select line…</option>
           {currentFactory?.lines.map((l) => <option key={l.id} value={l.id}>Line {l.name}</option>)}
         </select>
       </div>
+      {pickedLineId && (
+        <button className="btn" onClick={doLock} disabled={lockDevice.isPending} title="Lock this PC to the selected line" style={{ height: 38 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+          Lock to this line
+        </button>
+      )}
     </div>
   );
 
   if (!lineId) {
     return <div className="page">{Selector}<div className="card pad" style={{ textAlign: 'center', padding: 48 }}>
       <p style={{ fontWeight: 600, fontSize: 16 }}>Select your line to begin.</p>
-      <p className="muted">This station remembers your line on this PC for next time.</p>
+      <p className="muted">Pick your line, then press <b>Lock to this line</b> to fix this PC to it.</p>
     </div></div>;
   }
   if (station.isLoading || !station.data) return <div className="page">{Selector}<Loading /></div>;

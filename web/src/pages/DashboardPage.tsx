@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOverview, useLineRows, useDefects } from '../api/hooks';
 import { fmt, pct, facVar, todayStr, prettyDate } from '../lib/format';
-import { StatusPill, Loading } from '../components/ui';
+import { StatusPill, Loading, useToast } from '../components/ui';
+import { downloadLineReport } from '../lib/report';
 import { FactoryTargetBars, FactoryEffBars, DefectParetoBars } from '../components/charts';
 import type { LineRow } from '../api/types';
 
@@ -13,7 +14,21 @@ type SortKey = keyof Pick<LineRow, 'line' | 'factory' | 'buyer' | 'smv' | 'manpo
 export default function DashboardPage() {
   const { user } = useAuth();
   const nav = useNavigate();
+  const toast = useToast();
+  const [downloading, setDownloading] = useState<string | null>(null);
   const [date, setDate] = useState(todayStr());
+
+  async function onDownload(lineId: string, label: string) {
+    setDownloading(lineId);
+    try {
+      await downloadLineReport(lineId, date);
+      toast(`Report downloaded — ${label}`);
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Could not generate report', 'err');
+    } finally {
+      setDownloading(null);
+    }
+  }
   const [factoryFilter, setFactoryFilter] = useState('ALL');
   const [sortKey, setSortKey] = useState<SortKey>('avgEff');
   const [sortDir, setSortDir] = useState(-1);
@@ -176,12 +191,13 @@ export default function DashboardPage() {
             <th className="sortable" onClick={() => toggleSort('avgEff')}>Eff %{arrow('avgEff')}</th>
             <th className="sortable" onClick={() => toggleSort('dhu')}>DHU %{arrow('dhu')}</th>
             <th>Status</th>
+            <th>Report</th>
           </tr></thead>
           <tbody>
             {rows.isLoading ? (
-              <tr><td colSpan={12} style={{ textAlign: 'center', padding: 28, color: 'var(--ink-3)' }}>Loading…</td></tr>
+              <tr><td colSpan={13} style={{ textAlign: 'center', padding: 28, color: 'var(--ink-3)' }}>Loading…</td></tr>
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={12} style={{ textAlign: 'center', padding: 28, color: 'var(--ink-3)' }}>No line plans for this date.</td></tr>
+              <tr><td colSpan={13} style={{ textAlign: 'center', padding: 28, color: 'var(--ink-3)' }}>No line plans for this date.</td></tr>
             ) : (
               sorted.map((r) => (
                 <tr key={r.lineId}>
@@ -195,6 +211,18 @@ export default function DashboardPage() {
                   <td className="num" style={{ color: `var(--${r.status})`, fontWeight: 600 }}>{r.avgEff.toFixed(1)}</td>
                   <td className="num">{r.dhu.toFixed(1)}</td>
                   <td><StatusPill status={r.status} /></td>
+                  <td>
+                    <button
+                      className="dl-btn"
+                      title={`Download detailed report — ${r.factory} · Line ${r.line}`}
+                      disabled={downloading === r.lineId}
+                      onClick={() => onDownload(r.lineId, `${r.factory} · Line ${r.line}`)}
+                    >
+                      {downloading === r.lineId ? '…' : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12M7 11l5 4 5-4M5 21h14" /></svg>
+                      )}
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
