@@ -9,11 +9,15 @@ export default function FitToScreen({
   enabled,
   designWidth = 1500,
   maxScale = 1.6,
+  innerClassName = 'tvboard fit-pad',
+  pageClassName = 'page tvboard',
   children,
 }: {
   enabled: boolean;
   designWidth?: number;
   maxScale?: number;
+  innerClassName?: string;
+  pageClassName?: string;
   children: ReactNode;
 }) {
   const outerRef = useRef<HTMLDivElement>(null);
@@ -46,11 +50,11 @@ export default function FitToScreen({
     };
   }, [enabled, designWidth, maxScale]);
 
-  if (!enabled) return <div className="page tvboard">{children}</div>;
+  if (!enabled) return <div className={pageClassName}>{children}</div>;
 
   return (
     <div ref={outerRef} className="fit-outer">
-      <div ref={innerRef} className="tvboard fit-pad" style={{ width: designWidth, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+      <div ref={innerRef} className={innerClassName} style={{ width: designWidth, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
         {children}
       </div>
     </div>

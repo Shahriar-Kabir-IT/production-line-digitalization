@@ -1,67 +1,34 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useOverview, useLineRows, useDefects } from '../api/hooks';
+import { useOverview, useDefects } from '../api/hooks';
 import { fmt, pct, facVar, todayStr, prettyDate } from '../lib/format';
-import { StatusPill, Loading, useToast } from '../components/ui';
-import { downloadLineReport } from '../lib/report';
+import { Loading } from '../components/ui';
 import { FactoryTargetBars, FactoryEffBars, DefectParetoBars } from '../components/charts';
-import type { LineRow } from '../api/types';
+import FitToScreen from '../components/FitToScreen';
 
 const facHex: Record<string, string> = { AGL: '#2563eb', ASL: '#7c3aed', AJL: '#0e9488', ABM: '#db2777' };
-type SortKey = keyof Pick<LineRow, 'line' | 'factory' | 'buyer' | 'smv' | 'manpower' | 'dayTarget' | 'achieved' | 'pctOfPace' | 'avgEff' | 'dhu'>;
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const nav = useNavigate();
-  const toast = useToast();
-  const [downloading, setDownloading] = useState<string | null>(null);
   const [date, setDate] = useState(todayStr());
+  const [fit, setFit] = useState(() => { try { return localStorage.getItem('mes_fit_dash') === '1'; } catch { return false; } });
+  function toggleFit() { setFit((v) => { const nv = !v; try { localStorage.setItem('mes_fit_dash', nv ? '1' : '0'); } catch {} return nv; }); }
 
-  async function onDownload(lineId: string, label: string) {
-    setDownloading(lineId);
-    try {
-      await downloadLineReport(lineId, date);
-      toast(`Report downloaded — ${label}`);
-    } catch (e: any) {
-      toast(e?.response?.data?.error || 'Could not generate report', 'err');
-    } finally {
-      setDownloading(null);
-    }
-  }
-  const [factoryFilter, setFactoryFilter] = useState('ALL');
-  const [sortKey, setSortKey] = useState<SortKey>('avgEff');
-  const [sortDir, setSortDir] = useState(-1);
-
-  const factoryParam = factoryFilter === 'ALL' ? undefined : factoryFilter;
   const overview = useOverview(date);
-  const rows = useLineRows(date, factoryParam);
-  const defects = useDefects(date, factoryParam);
-
-  const sorted = useMemo(() => {
-    const data = rows.data ? [...rows.data] : [];
-    data.sort((a, b) => {
-      const x = a[sortKey], y = b[sortKey];
-      if (typeof x === 'string' && typeof y === 'string') return x.localeCompare(y) * sortDir;
-      return ((x as number) - (y as number)) * sortDir;
-    });
-    return data;
-  }, [rows.data, sortKey, sortDir]);
+  const defects = useDefects(date);
 
   if (overview.isLoading) return <div className="page"><Loading /></div>;
   const o = overview.data!;
   const isSuper = user?.role === 'SUPER_ADMIN';
   const avgTargetEff = o.factories.length ? o.factories.reduce((s, f) => s + f.targetEff, 0) / o.factories.length : 78;
-
-  function toggleSort(k: SortKey) { if (sortKey === k) setSortDir((d) => -d); else { setSortKey(k); setSortDir(-1); } }
-  const arrow = (k: SortKey) => (sortKey === k ? (sortDir < 0 ? ' ▼' : ' ▲') : '');
-
   const pareto = (defects.data?.byCode ?? []).slice(0, 12);
   const rankOrder = [...o.factories].sort((a, b) => b.avgEff - a.avgEff).map((f) => f.factoryId);
   const rankOf = (id: string) => rankOrder.indexOf(id) + 1;
 
   return (
-    <div className="page">
+    <FitToScreen enabled={fit} designWidth={1500} innerClassName="fit-pad" pageClassName="page">
       <div className="page-head">
         <div>
           <h1>{isSuper ? 'Master Dashboard' : `Factory Dashboard · ${user?.factoryCode}`}</h1>
@@ -69,6 +36,9 @@ export default function DashboardPage() {
         </div>
         <div className="spacer" />
         <div className="field"><label htmlFor="date">Date</label><input id="date" className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 170 }} /></div>
+        <button className="btn ghost" onClick={toggleFit} title={fit ? 'Fit to screen: on' : 'Fit to screen: off'} aria-label="Toggle fit to screen" style={{ alignSelf: 'flex-end', height: 38 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{fit ? <path d="M9 3H5a2 2 0 00-2 2v4M15 3h4a2 2 0 012 2v4M9 21H5a2 2 0 01-2-2v-4M15 21h4a2 2 0 002-2v-4" /> : <path d="M3 9V5a2 2 0 012-2h4M21 9V5a2 2 0 00-2-2h-4M3 15v4a2 2 0 002 2h4M21 15v4a2 2 0 01-2 2h-4" />}</svg>
+        </button>
       </div>
 
       <div className="summary-strip">
@@ -108,7 +78,7 @@ export default function DashboardPage() {
       <div className="sec-title"><h2>{isSuper ? 'Factories' : 'Factory'}</h2><div className="ln" /></div>
       <div className="fac-grid">
         {o.factories.map((f) => (
-          <div key={f.factoryId} className="card fac-card" style={{ ['--facac' as any]: facVar(f.code) }} onClick={() => setFactoryFilter((cur) => (cur === f.factoryId ? 'ALL' : f.factoryId))}>
+          <div key={f.factoryId} className="card fac-card" style={{ ['--facac' as any]: facVar(f.code), cursor: 'default' }}>
             <div className="top">
               <div><div className="fcode"><span className="dot" style={{ background: facVar(f.code) }} />{f.code}{isSuper && <span className="fac-rank">#{rankOf(f.factoryId)}</span>}</div><div className="fname">{f.name}</div></div>
               <span className={`pill ${f.avgEff >= f.targetEff * 0.92 ? 'good' : f.avgEff >= f.targetEff * 0.75 ? 'warn' : 'crit'}`}><i />{f.avgEff.toFixed(0)}%</span>
@@ -163,72 +133,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      <div className="sec-title"><h2>Line-wise Output</h2><div className="ln" /></div>
-      {isSuper && (
-        <div className="filters">
-          <button className="chip" aria-pressed={factoryFilter === 'ALL'} onClick={() => setFactoryFilter('ALL')}>All factories</button>
-          {o.factories.map((f) => (
-            <button key={f.factoryId} className="chip" aria-pressed={factoryFilter === f.factoryId} onClick={() => setFactoryFilter(f.factoryId)}>
-              <span className="dot" style={{ background: facVar(f.code) }} />{f.code}
-            </button>
-          ))}
-          <span className="muted" style={{ marginLeft: 'auto', fontSize: 12 }}>Click a column to sort · click a line to open its TV board</span>
-        </div>
-      )}
-      <div className="tablewrap">
-        <table className="data">
-          <thead><tr>
-            <th className="sortable" onClick={() => toggleSort('line')}>Line{arrow('line')}</th>
-            <th className="sortable" onClick={() => toggleSort('factory')}>Factory{arrow('factory')}</th>
-            <th className="sortable" onClick={() => toggleSort('buyer')}>Buyer{arrow('buyer')}</th>
-            <th>Style</th>
-            <th className="sortable" onClick={() => toggleSort('smv')}>SMV{arrow('smv')}</th>
-            <th className="sortable" onClick={() => toggleSort('manpower')}>M/P{arrow('manpower')}</th>
-            <th className="sortable" onClick={() => toggleSort('dayTarget')}>Target{arrow('dayTarget')}</th>
-            <th className="sortable" onClick={() => toggleSort('achieved')}>Achieved{arrow('achieved')}</th>
-            <th className="sortable" onClick={() => toggleSort('pctOfPace')}>Pace{arrow('pctOfPace')}</th>
-            <th className="sortable" onClick={() => toggleSort('avgEff')}>Eff %{arrow('avgEff')}</th>
-            <th className="sortable" onClick={() => toggleSort('dhu')}>DHU %{arrow('dhu')}</th>
-            <th>Status</th>
-            <th>Report</th>
-          </tr></thead>
-          <tbody>
-            {rows.isLoading ? (
-              <tr><td colSpan={13} style={{ textAlign: 'center', padding: 28, color: 'var(--ink-3)' }}>Loading…</td></tr>
-            ) : sorted.length === 0 ? (
-              <tr><td colSpan={13} style={{ textAlign: 'center', padding: 28, color: 'var(--ink-3)' }}>No line plans for this date.</td></tr>
-            ) : (
-              sorted.map((r) => (
-                <tr key={r.lineId}>
-                  <td><span className="linetag"><span className="dot" style={{ background: facVar(r.factory) }} /><span className="rowlink" onClick={() => nav(`/tv/${r.lineId}`)}>{r.line}</span></span></td>
-                  <td className="muted">{r.factory}</td>
-                  <td>{r.buyer}</td>
-                  <td className="muted" style={{ maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.style}</td>
-                  <td className="num">{r.smv}</td><td className="num">{r.manpower}</td><td className="num">{fmt(r.dayTarget)}</td>
-                  <td className="num">{fmt(r.achieved)} <span className="mini" style={{ marginLeft: 6 }}><i style={{ width: `${Math.min(100, (r.achieved / r.dayTarget) * 100)}%`, background: facVar(r.factory) }} /></span></td>
-                  <td className="num" style={{ color: r.pctOfPace >= 100 ? 'var(--good)' : r.pctOfPace >= 85 ? 'var(--warn)' : 'var(--crit)' }}>{r.pctOfPace.toFixed(0)}%</td>
-                  <td className="num" style={{ color: `var(--${r.status})`, fontWeight: 600 }}>{r.avgEff.toFixed(1)}</td>
-                  <td className="num">{r.dhu.toFixed(1)}</td>
-                  <td><StatusPill status={r.status} /></td>
-                  <td>
-                    <button
-                      className="dl-btn"
-                      title={`Download detailed report — ${r.factory} · Line ${r.line}`}
-                      disabled={downloading === r.lineId}
-                      onClick={() => onDownload(r.lineId, `${r.factory} · Line ${r.line}`)}
-                    >
-                      {downloading === r.lineId ? '…' : (
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12M7 11l5 4 5-4M5 21h14" /></svg>
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </FitToScreen>
   );
 }

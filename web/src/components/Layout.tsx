@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LiveClock, ToastProvider, AppFooter, LogoMark } from './ui';
+import { LiveClock, ToastProvider, AppFooter, LogoMark, FullscreenButton } from './ui';
 import type { Role } from '../api/types';
 
 const roleName: Record<Role, string> = { SUPER_ADMIN: 'Super Admin', WORK_STUDY: 'Work Study', LINE_WORKER: 'Line Worker', SYS_ADMIN: 'System Admin', PRODUCTION_MANAGER: 'Production Manager' };
@@ -9,7 +9,7 @@ const roleName: Record<Role, string> = { SUPER_ADMIN: 'Super Admin', WORK_STUDY:
 const icons = {
   dash: <path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" />,
   plan: <><path d="M9 3v4M15 3v4M4 8h16M5 8v12a1 1 0 001 1h12a1 1 0 001-1V8" /><path d="M8 13h3M8 17h5" /></>,
-  tv: <><rect x="2" y="4" width="20" height="14" rx="2" /><path d="M8 21h8M12 18v3" /></>,
+  lines: <><path d="M3 5h18M3 12h18M3 19h18" /><circle cx="7" cy="5" r="0.6" /></>,
   device: <><rect x="4" y="3" width="16" height="12" rx="2" /><path d="M8 21h8M12 15v6" /><rect x="9" y="7" width="6" height="4" rx="1" /></>,
 };
 
@@ -17,6 +17,7 @@ function navFor(role: Role) {
   if (role === 'SYS_ADMIN') return [{ to: '/sysadmin', label: 'Devices', icon: icons.device }];
   return [
     { to: '/dashboard', label: 'Dashboard', icon: icons.dash },
+    { to: '/lines', label: 'Line Output', icon: icons.lines },
     { to: '/plan', label: 'Plan Entry', icon: icons.plan },
   ];
 }
@@ -29,6 +30,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <ToastProvider>
+      <div className="app-shell">
       <header className="topbar">
         <div className="brand">
           <LogoMark />
@@ -46,6 +48,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="topbar-right">
+          <FullscreenButton />
           <LiveClock />
           <div className="usermenu">
             <div className="who">
@@ -59,8 +62,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main>{children}</main>
+      <main className="pub-main">{children}</main>
       <AppFooter />
+      </div>
     </ToastProvider>
   );
 }

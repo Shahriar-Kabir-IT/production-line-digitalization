@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { LiveClock, ToastProvider, AppFooter, LogoMark } from './ui';
+import { LiveClock, ToastProvider, AppFooter, LogoMark, FullscreenButton } from './ui';
 import { useDevice } from '../api/hooks';
 import { getDeviceId } from '../lib/device';
 
@@ -46,6 +46,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             )}
           </nav>
           <div className="topbar-right">
+            <FullscreenButton />
             <LiveClock />
           </div>
         </header>
