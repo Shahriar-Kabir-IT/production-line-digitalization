@@ -9,11 +9,6 @@ import FitToScreen from '../components/FitToScreen';
 
 const facHex: Record<string, string> = { AGL: '#2563eb', ASL: '#7c3aed', AJL: '#0e9488', ABM: '#db2777' };
 
-function toggleFullscreen() {
-  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
-  else document.exitFullscreen?.();
-}
-
 export default function PmDashboardPage() {
   const { pmId } = useParams();
   const nav = useNavigate();
@@ -85,9 +80,6 @@ export default function PmDashboardPage() {
           )}
           <button className="btn ghost" onClick={toggleFit} title={fit ? 'Fit to screen: on' : 'Fit to screen: off'} aria-label="Toggle fit to screen">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{fit ? <path d="M9 3H5a2 2 0 00-2 2v4M15 3h4a2 2 0 012 2v4M9 21H5a2 2 0 01-2-2v-4M15 21h4a2 2 0 002-2v-4" /> : <path d="M3 9V5a2 2 0 012-2h4M21 9V5a2 2 0 00-2-2h-4M3 15v4a2 2 0 002 2h4M21 15v4a2 2 0 01-2 2h-4" />}</svg>
-          </button>
-          <button className="btn ghost" onClick={toggleFullscreen} title="Fullscreen" aria-label="Fullscreen">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3" /></svg>
           </button>
           <div className="live-badge"><i />LIVE</div>
         </div>

@@ -9,6 +9,7 @@ import PublicLayout from './components/PublicLayout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import LinesPage from './pages/LinesPage';
 import WorkStudyPage from './pages/WorkStudyPage';
 import StationPage from './pages/StationPage';
 import TVSelectPage from './pages/TVSelectPage';
@@ -66,6 +67,7 @@ export default function App() {
       {/* auth */}
       <Route path="/login" element={user ? <Navigate to={homePath(user.role)} replace /> : <LoginPage />} />
       <Route path="/dashboard" element={<Protected roles={['SUPER_ADMIN', 'WORK_STUDY']}><DashboardPage /></Protected>} />
+      <Route path="/lines" element={<Protected roles={['SUPER_ADMIN', 'WORK_STUDY']}><LinesPage /></Protected>} />
       <Route path="/plan" element={<Protected roles={['SUPER_ADMIN', 'WORK_STUDY']}><WorkStudyPage /></Protected>} />
       <Route path="/sysadmin" element={<Protected roles={['SYS_ADMIN']}><SysAdminPage /></Protected>} />
 

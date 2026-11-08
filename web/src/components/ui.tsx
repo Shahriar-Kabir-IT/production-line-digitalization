@@ -52,6 +52,30 @@ export function Loading({ label = 'Loading…' }: { label?: string }) {
   return <div className="fullcenter" style={{ minHeight: 260 }}>{label}</div>;
 }
 
+export function FullscreenButton({ className = 'btn ghost' }: { className?: string }) {
+  const [fs, setFs] = useState(typeof document !== 'undefined' && !!document.fullscreenElement);
+  useEffect(() => {
+    const h = () => setFs(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', h);
+    return () => document.removeEventListener('fullscreenchange', h);
+  }, []);
+  function toggle() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+  return (
+    <button className={className} onClick={toggle} title={fs ? 'Exit full screen' : 'View full screen'} aria-label="Toggle full screen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        {fs ? (
+          <path d="M9 3H5a2 2 0 00-2 2v4M15 3h4a2 2 0 012 2v4M9 21H5a2 2 0 01-2-2v-4M15 21h4a2 2 0 002-2v-4" />
+        ) : (
+          <path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3" />
+        )}
+      </svg>
+    </button>
+  );
+}
+
 // Crisp vector mark (Ananta swatch + globe) for small UI like the top bar.
 export function LogoMark({ size = 34 }: { size?: number }) {
   return (
