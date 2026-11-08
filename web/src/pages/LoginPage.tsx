@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const DEMO = [
-  { label: 'Super Admin', sub: 'all factories', username: 'admin' },
-  { label: 'Work Study', sub: 'AGL factory', username: 'ws.agl' },
+  { label: 'Super Admin', sub: 'all factories', username: 'admin', pass: 'password' },
+  { label: 'Work Study', sub: 'AGL factory', username: 'ws.agl', pass: 'password' },
+  { label: 'System Admin', sub: 'station devices', username: 'sysadmin', pass: '1234' },
 ];
 
 export default function LoginPage() {
@@ -64,10 +65,10 @@ export default function LoginPage() {
           </form>
 
           <div className="l2-demo">
-            <span className="l2-demo-label">Demo accounts · password <code>password</code></span>
+            <span className="l2-demo-label">Quick sign-in</span>
             <div className="l2-demo-row">
               {DEMO.map((d) => (
-                <button key={d.username} type="button" className="l2-demo-btn" onClick={() => { setUsername(d.username); setPassword('password'); }}>
+                <button key={d.username} type="button" className="l2-demo-btn" onClick={() => { setUsername(d.username); setPassword(d.pass); }}>
                   <b>{d.label}</b><span>{d.sub}</span>
                 </button>
               ))}

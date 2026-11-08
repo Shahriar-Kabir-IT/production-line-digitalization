@@ -1,4 +1,4 @@
-export type Role = 'SUPER_ADMIN' | 'WORK_STUDY' | 'LINE_WORKER';
+export type Role = 'SUPER_ADMIN' | 'WORK_STUDY' | 'LINE_WORKER' | 'SYS_ADMIN' | 'PRODUCTION_MANAGER';
 export type Status = 'good' | 'warn' | 'crit';
 export type HourState = 'locked' | 'open' | 'upcoming';
 
@@ -65,6 +65,25 @@ export interface Station {
   metrics: Metrics | null;
   hourLabels: string[];
   openHourIndex: number;
+}
+
+export interface Device {
+  id: string; name: string | null; ipAddress: string | null; locked: boolean;
+  lockType: 'line' | 'pm' | null; lockTarget: string | null;
+  lockedLineId: string | null; line: string | null; factory: string | null; factoryName: string | null;
+  lockedPmId: string | null; pmName: string | null;
+  lastSeen: string; createdAt: string;
+}
+export interface SysOverview { factories: number; lines: number; users: number; devices: number; lockedDevices: number; }
+
+export interface PmLite { id: string; name: string; factory: string | null; factoryName: string | null; lineCount: number; }
+
+export interface PmDashboard {
+  date: string;
+  pm: { name: string; factory: string | null; factoryName: string | null; lineCount: number; reporting: number };
+  totals: { target: number; achieved: number; projected: number; defects: number; avgEff: number; targetEff: number; dhu: number };
+  lines: LineRow[];
+  byCode: { code: string; name: string; count: number }[];
 }
 
 export interface DefectAnalytics {

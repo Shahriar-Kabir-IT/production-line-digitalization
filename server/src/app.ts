@@ -6,6 +6,7 @@ import { factoriesRouter } from './modules/factories/factories.routes';
 import { workstudyRouter } from './modules/workstudy/workstudy.routes';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes';
 import { publicRouter } from './modules/public/public.routes';
+import { sysadminRouter } from './modules/sysadmin/sysadmin.routes';
 import { errorHandler, notFound } from './middleware/error';
 
 export function createApp() {
@@ -23,6 +24,7 @@ export function createApp() {
   app.use('/api/factories', factoriesRouter);
   app.use('/api/workstudy', workstudyRouter);
   app.use('/api/dashboard', dashboardRouter);
+  app.use('/api/sysadmin', sysadminRouter);
 
   app.use(notFound);
   app.use(errorHandler);

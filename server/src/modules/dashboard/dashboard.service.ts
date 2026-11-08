@@ -1,8 +1,8 @@
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { HOUR_LABELS } from '../../lib/constants';
-import { computeLineMetrics, EntryInput } from '../../utils/metrics';
-import { AuthUser } from '../../middleware/auth';
+import { computeLineMetrics, EntryInput, hourlyEfficiency } from '../../utils/metrics';
+import { AuthUser, assertFactoryScope } from '../../middleware/auth';
 import { AppError } from '../../utils/http';
 
 export function normalizeDate(input?: string): Date {
@@ -164,6 +164,110 @@ export async function getDefectAnalytics(user: AuthUser, date: Date, factoryId?:
     totals: { defects: totalDefects, checked: totalChecked, dhu: totalChecked > 0 ? +((totalDefects * 100) / totalChecked).toFixed(1) : 0 },
     byCode,
     byLine: byLine.filter((l) => l.defects > 0).sort((a, b) => b.dhu - a.dhu),
+  };
+}
+
+/** Full detailed report for one line on one date — hourly breakdown + defect totals. */
+export async function getLineReport(user: AuthUser, lineId: string, date: Date) {
+  const line = await prisma.line.findUnique({ where: { id: lineId }, include: { factory: true } });
+  if (!line) throw new AppError(404, 'Line not found');
+  assertFactoryScope(user, line.factoryId);
+
+  const [plan, codes] = await Promise.all([
+    prisma.workStudyPlan.findUnique({ where: { lineId_date: { lineId, date } }, ...planInclude }),
+    prisma.defectCode.findMany({ orderBy: { sortOrder: 'asc' } }),
+  ]);
+
+  const head = { factory: line.factory.code, factoryName: line.factory.name, line: line.name, date: date.toISOString().slice(0, 10) };
+  if (!plan) {
+    return { ...head, plan: null, hours: [], metrics: null, defectCodes: codes.map((c) => ({ code: c.code, name: c.name })), byCode: [] };
+  }
+
+  const m = metricsFor(plan);
+  const entryByIndex = new Map(plan.entries.map((e) => [e.hourIndex, e]));
+  const byCodeMap = new Map<string, number>();
+
+  const hours = HOUR_LABELS.map((label, i) => {
+    const e = entryByIndex.get(i);
+    const defects: Record<string, number> = {};
+    let total = 0;
+    e?.defects.forEach((d) => { defects[d.code] = d.count; total += d.count; byCodeMap.set(d.code, (byCodeMap.get(d.code) ?? 0) + d.count); });
+    const checked = e?.checkedQty ?? 0;
+    return {
+      hourLabel: label,
+      checked,
+      efficiency: checked > 0 ? +hourlyEfficiency(checked, plan.smv, plan.manpower).toFixed(1) : 0,
+      totalDefects: total,
+      dhu: checked > 0 ? +((total * 100) / checked).toFixed(1) : 0,
+      defects,
+    };
+  });
+
+  const byCode = codes
+    .filter((c) => byCodeMap.get(c.code))
+    .map((c) => ({ code: c.code, name: c.name, count: byCodeMap.get(c.code)! }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    ...head,
+    plan: { buyer: plan.buyerName, style: plan.style, smv: plan.smv, manpower: plan.manpower, dayTarget: plan.dayTarget, plannedHours: plan.plannedHours, targetEff: m.targetEff },
+    hours,
+    metrics: { achieved: m.achieved, projected: m.projected, avgEff: m.avgEff, totalDefects: m.totalDefects, totalChecked: m.totalChecked, dhu: m.dhu },
+    defectCodes: codes.map((c) => ({ code: c.code, name: c.name })),
+    byCode,
+  };
+}
+
+/** List all Production Managers (public — for the PM board selector). */
+export async function listPms() {
+  const pms = await prisma.user.findMany({
+    where: { role: Role.PRODUCTION_MANAGER },
+    include: { factory: true, _count: { select: { managedLines: true } } },
+    orderBy: [{ factory: { code: 'asc' } }, { name: 'asc' }],
+  });
+  return pms.map((p) => ({
+    id: p.id,
+    name: p.name,
+    factory: p.factory?.code ?? null,
+    factoryName: p.factory?.name ?? null,
+    lineCount: p._count.managedLines,
+  }));
+}
+
+/** Dashboard for one Production Manager — only their assigned lines. */
+export async function getPmDashboard(pm: { id: string; name: string; factoryId: string | null }, date: Date) {
+  const lineCount = await prisma.line.count({ where: { pmUserId: pm.id } });
+  const plans = await prisma.workStudyPlan.findMany({
+    where: { date, line: { pmUserId: pm.id } },
+    ...planInclude,
+    orderBy: [{ line: { name: 'asc' } }],
+  });
+  const rows = plans.map(serializeLineRow);
+
+  const target = rows.reduce((s, r) => s + r.dayTarget, 0);
+  const achieved = rows.reduce((s, r) => s + r.achieved, 0);
+  const projected = rows.reduce((s, r) => s + r.projected, 0);
+  const defects = rows.reduce((s, r) => s + r.totalDefects, 0);
+  const avgEff = rows.length ? rows.reduce((s, r) => s + r.avgEff, 0) / rows.length : 0;
+  const targetEff = rows.length ? rows.reduce((s, r) => s + r.targetEff, 0) / rows.length : 0;
+
+  const codes = await prisma.defectCode.findMany();
+  const nameByCode = new Map(codes.map((c) => [c.code, c.name]));
+  const byCodeMap = new Map<string, number>();
+  plans.forEach((p) => p.entries.forEach((e) => e.defects.forEach((d) => byCodeMap.set(d.code, (byCodeMap.get(d.code) ?? 0) + d.count))));
+  const byCode = [...byCodeMap.entries()].map(([code, count]) => ({ code, name: nameByCode.get(code) ?? code, count })).sort((a, b) => b.count - a.count);
+
+  const factory = pm.factoryId ? await prisma.factory.findUnique({ where: { id: pm.factoryId } }) : null;
+  return {
+    date: date.toISOString().slice(0, 10),
+    pm: { name: pm.name, factory: factory?.code ?? null, factoryName: factory?.name ?? null, lineCount, reporting: rows.length },
+    totals: {
+      target, achieved, projected, defects,
+      avgEff: +avgEff.toFixed(1), targetEff: +targetEff.toFixed(1),
+      dhu: achieved > 0 ? +((defects * 100) / achieved).toFixed(1) : 0,
+    },
+    lines: rows,
+    byCode,
   };
 }
 

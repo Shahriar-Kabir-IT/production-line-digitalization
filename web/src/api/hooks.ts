@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import client from './client';
-import type { Board, DefectAnalytics, Factory, LineRow, Overview, PlanRecord, Station } from './types';
+import type { Board, DefectAnalytics, Device, Factory, LineRow, Overview, PlanRecord, PmDashboard, PmLite, Station, SysOverview } from './types';
 
 // ---- authenticated (Work Study / Super Admin) ----
 export function useFactories() {
@@ -69,6 +69,60 @@ export function useAdjustCheck(lineId: string) {
     onSuccess: (data) => qc.setQueryData(['station', lineId], data),
   });
 }
+// ---- production manager boards (public TV) ----
+export function usePublicPms() {
+  return useQuery({ queryKey: ['pms'], queryFn: async () => (await client.get<{ pms: PmLite[] }>('/public/pms')).data.pms });
+}
+export function usePmDashboard(pmId: string | undefined, date: string) {
+  return useQuery({
+    enabled: !!pmId,
+    queryKey: ['pmDashboard', pmId, date],
+    refetchInterval: 30_000,
+    queryFn: async () => (await client.get<PmDashboard>(`/public/pm/${pmId}/dashboard`, { params: { date } })).data,
+  });
+}
+
+// ---- station device lock (public) ----
+export function useDevice(deviceId: string) {
+  return useQuery({
+    queryKey: ['device', deviceId],
+    refetchInterval: 15_000, // notice sysadmin unlock within ~15s
+    queryFn: async () => (await client.get<Device>(`/public/device/${deviceId}`)).data,
+  });
+}
+export function useLockDevice(deviceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (b: { lineId: string; name?: string }) => (await client.post<Device>(`/public/device/${deviceId}/lock`, b)).data,
+    onSuccess: (d) => qc.setQueryData(['device', deviceId], d),
+  });
+}
+export function useLockDeviceToPm(deviceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (b: { pmId: string; name?: string }) => (await client.post<Device>(`/public/device/${deviceId}/lock-pm`, b)).data,
+    onSuccess: (d) => qc.setQueryData(['device', deviceId], d),
+  });
+}
+
+// ---- sysadmin ----
+export function useSysOverview() {
+  return useQuery({ queryKey: ['sysOverview'], queryFn: async () => (await client.get<SysOverview>('/sysadmin/overview')).data });
+}
+export function useSysDevices() {
+  return useQuery({ queryKey: ['sysDevices'], refetchInterval: 15_000, queryFn: async () => (await client.get<{ devices: Device[] }>('/sysadmin/devices')).data.devices });
+}
+export function useSysDeviceAction() {
+  const qc = useQueryClient();
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['sysDevices'] }); qc.invalidateQueries({ queryKey: ['sysOverview'] }); };
+  return {
+    unlock: useMutation({ mutationFn: async (id: string) => (await client.post(`/sysadmin/devices/${id}/unlock`)).data, onSuccess: refresh }),
+    lock: useMutation({ mutationFn: async (v: { id: string; lineId: string }) => (await client.post(`/sysadmin/devices/${v.id}/lock`, { lineId: v.lineId })).data, onSuccess: refresh }),
+    rename: useMutation({ mutationFn: async (v: { id: string; name: string }) => (await client.patch(`/sysadmin/devices/${v.id}`, { name: v.name })).data, onSuccess: refresh }),
+    remove: useMutation({ mutationFn: async (id: string) => (await client.delete(`/sysadmin/devices/${id}`)).data, onSuccess: refresh }),
+  };
+}
+
 export function useAdjustDefect(lineId: string) {
   const qc = useQueryClient();
   return useMutation({

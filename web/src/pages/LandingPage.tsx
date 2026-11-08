@@ -8,9 +8,14 @@ const cards = [
     icon: <><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0113 0" /></>,
   },
   {
-    to: '/tv', title: 'TV Board', accent: '#0e9488', tag: 'Big screen',
+    to: '/tv', title: 'Line TV Board', accent: '#0e9488', tag: 'Big screen',
     desc: 'Pick a line to display Target vs Achieved and live efficiency on a mounted TV.',
     icon: <><rect x="2" y="4" width="20" height="14" rx="2" /><path d="M8 21h8M12 18v3" /></>,
+  },
+  {
+    to: '/pm', title: 'PM Board', accent: '#db2777', tag: 'Big screen',
+    desc: 'Pick a Production Manager to show all their lines’ performance on the TV.',
+    icon: <><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></>,
   },
   {
     to: '/login', title: 'Work Study / Admin', accent: '#1e4a60', tag: 'Sign in',

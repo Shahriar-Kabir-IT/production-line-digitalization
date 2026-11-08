@@ -11,6 +11,23 @@ export const FACTORY_TZ = 'Asia/Dhaka';
 // Minutes of grace after an hour ends before its box locks (0 = strict).
 export const LOCK_GRACE_MIN = 0;
 
+// Production-Manager allocation (Factory Wise PM Allocation). Line names match the DB.
+export const PM_ALLOCATION: { factory: string; pm: string; floor: string; lines: string[] }[] = [
+  { factory: 'AGL', pm: 'PM 1', floor: '3rd', lines: ['A', 'B', 'C', 'New-10', 'D', 'E', 'F', 'New-02'] },
+  { factory: 'AGL', pm: 'PM 2', floor: '4th', lines: ['G', 'H', 'I', 'New-11', 'J', 'K', 'L', 'New-01'] },
+  { factory: 'AGL', pm: 'PM 3', floor: '5th', lines: ['M', 'N', 'O', 'New-12', 'New-15'] },
+  { factory: 'ASL', pm: 'PM 4', floor: '5th', lines: ['P', 'Q', 'R', 'New-08'] },
+  { factory: 'ASL', pm: 'PM 5', floor: '6th', lines: ['S', 'T', 'U', 'New-09', 'New-16', 'V', 'W', 'X', 'New-03'] },
+  { factory: 'ASL', pm: 'PM 6', floor: '7th', lines: ['Y', 'Z', 'New-04', 'New-13', 'New-05', 'New-06', 'New-07', 'New-14'] },
+  { factory: 'AJL', pm: 'PM 1', floor: '4th', lines: ['A', 'B', 'C', 'D', 'E', 'F'] },
+  { factory: 'AJL', pm: 'PM 2', floor: '5th', lines: ['G', 'H', 'I', 'J', 'K', 'L'] },
+  { factory: 'AJL', pm: 'PM 3', floor: '6th', lines: ['M', 'N', 'O', 'P', 'Q', 'R'] },
+  { factory: 'AJL', pm: 'PM 4', floor: '7th', lines: ['S', 'T', 'U', 'V', 'W'] },
+  { factory: 'ABM', pm: 'PM 1', floor: '3rd–4th', lines: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16'] },
+  { factory: 'ABM', pm: 'PM 2', floor: '5th', lines: ['17', '18', '19', '20', '21'] },
+];
+export const pmUsername = (factory: string, pm: string) => `${pm.replace(/\s+/g, '').toLowerCase()}.${factory.toLowerCase()}`;
+
 // Defect-code master (from form Q-SEW006-01). A few faint codes on the scan are
 // best-effort; edit names/codes here and re-seed if the controlled list differs.
 export const DEFECT_CODES: { code: string; name: string }[] = [
