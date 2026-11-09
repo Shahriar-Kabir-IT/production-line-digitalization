@@ -36,17 +36,21 @@ const pub = (node: ReactNode) => <PublicLayout>{node}</PublicLayout>;
 
 // A locked device (QC station → a line, or a PM-board TV → a PM) cannot leave its
 // page. Any other route is sent back to the locked page until a sysadmin unlocks.
-function LockGuard() {
+// Exceptions: a signed-in staff user (Work Study / Super Admin / Sys Admin) is never
+// kiosk-locked, and the /login page is always reachable as the sign-in escape hatch —
+// otherwise an admin could never log in on a locked kiosk.
+function LockGuard({ authed }: { authed: boolean }) {
   const deviceId = useMemo(getDeviceId, []);
   const device = useDevice(deviceId);
   const loc = useLocation();
   const nav = useNavigate();
   useEffect(() => {
+    if (authed || loc.pathname === '/login') return;
     const d = device.data;
     if (!d?.locked) return;
     if (d.lockType === 'line' && loc.pathname !== '/station') nav('/station', { replace: true });
     else if (d.lockType === 'pm' && d.lockedPmId && loc.pathname !== `/pm/${d.lockedPmId}`) nav(`/pm/${d.lockedPmId}`, { replace: true });
-  }, [device.data, loc.pathname, nav]);
+  }, [authed, device.data, loc.pathname, nav]);
   return null;
 }
 
@@ -54,7 +58,7 @@ export default function App() {
   const { user, loading } = useAuth();
   return (
     <>
-      <LockGuard />
+      <LockGuard authed={!!user} />
       <Routes>
       {/* public kiosk */}
       <Route path="/" element={<LandingPage />} />
