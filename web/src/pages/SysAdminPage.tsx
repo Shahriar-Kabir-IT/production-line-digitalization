@@ -17,11 +17,12 @@ function timeAgo(iso: string): string {
 
 const ROLE_LABELS: Record<ManagedRole, string> = {
   SUPER_ADMIN: 'Super Admin',
+  EXECUTIVE: 'Executive (Management)',
   WORK_STUDY: 'Work Study',
   PRODUCTION_MANAGER: 'Production Manager',
   SYS_ADMIN: 'System Admin',
 };
-const ROLE_ORDER: ManagedRole[] = ['SUPER_ADMIN', 'WORK_STUDY', 'PRODUCTION_MANAGER', 'SYS_ADMIN'];
+const ROLE_ORDER: ManagedRole[] = ['SUPER_ADMIN', 'EXECUTIVE', 'WORK_STUDY', 'PRODUCTION_MANAGER', 'SYS_ADMIN'];
 const needsFactory = (r: ManagedRole) => r === 'WORK_STUDY' || r === 'PRODUCTION_MANAGER';
 const EMPTY: NewUser = { username: '', name: '', password: '', role: 'WORK_STUDY', factoryId: '' };
 

@@ -10,7 +10,7 @@ export const dashboardRouter = Router();
 dashboardRouter.get(
   '/overview',
   requireAuth,
-  requireRole(Role.SUPER_ADMIN, Role.WORK_STUDY),
+  requireRole(Role.SUPER_ADMIN, Role.WORK_STUDY, Role.EXECUTIVE),
   asyncHandler(async (req, res) => {
     res.json(await getOverview(req.user!, normalizeDate(req.query.date as string | undefined)));
   }),
@@ -20,7 +20,7 @@ dashboardRouter.get(
 dashboardRouter.get(
   '/lines',
   requireAuth,
-  requireRole(Role.SUPER_ADMIN, Role.WORK_STUDY),
+  requireRole(Role.SUPER_ADMIN, Role.WORK_STUDY, Role.EXECUTIVE),
   asyncHandler(async (req, res) => {
     const rows = await getLineRows(
       req.user!,
@@ -35,7 +35,7 @@ dashboardRouter.get(
 dashboardRouter.get(
   '/line/:lineId/report',
   requireAuth,
-  requireRole(Role.SUPER_ADMIN, Role.WORK_STUDY),
+  requireRole(Role.SUPER_ADMIN, Role.WORK_STUDY, Role.EXECUTIVE),
   asyncHandler(async (req, res) => {
     res.json(await getLineReport(req.user!, req.params.lineId, normalizeDate(req.query.date as string | undefined)));
   }),
@@ -45,7 +45,7 @@ dashboardRouter.get(
 dashboardRouter.get(
   '/defects',
   requireAuth,
-  requireRole(Role.SUPER_ADMIN, Role.WORK_STUDY),
+  requireRole(Role.SUPER_ADMIN, Role.WORK_STUDY, Role.EXECUTIVE),
   asyncHandler(async (req, res) => {
     res.json(
       await getDefectAnalytics(

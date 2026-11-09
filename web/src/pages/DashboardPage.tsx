@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
   if (overview.isLoading) return <div className="page"><Loading /></div>;
   const o = overview.data!;
-  const isSuper = user?.role === 'SUPER_ADMIN';
+  const isSuper = user?.role === 'SUPER_ADMIN' || user?.role === 'EXECUTIVE';
   const avgTargetEff = o.factories.length ? o.factories.reduce((s, f) => s + f.targetEff, 0) / o.factories.length : 78;
   const pareto = (defects.data?.byCode ?? []).slice(0, 12);
   const rankOrder = [...o.factories].sort((a, b) => b.avgEff - a.avgEff).map((f) => f.factoryId);

@@ -39,7 +39,7 @@ export function metricsFor(plan: PlanFull) {
 }
 
 export function scopedFactoryIds(user: AuthUser): string[] | 'ALL' {
-  if (user.role === Role.SUPER_ADMIN) return 'ALL';
+  if (user.role === Role.SUPER_ADMIN || user.role === Role.EXECUTIVE) return 'ALL';
   if (user.factoryId) return [user.factoryId];
   return [];
 }

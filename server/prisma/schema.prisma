@@ -16,6 +16,7 @@ enum Role {
   LINE_WORKER        // legacy authorship; the QC station is now a no-login kiosk
   SYS_ADMIN          // manages station devices (lock/unlock) + system
   PRODUCTION_MANAGER // a set of assigned lines — PM dashboard (logs in)
+  EXECUTIVE          // higher management — read-only executive slideshow + detail drill-down (logs in)
 }
 
 model Factory {
