@@ -2,16 +2,10 @@ import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const DEMO = [
-  { label: 'Super Admin', sub: 'all factories', username: 'admin', pass: 'password' },
-  { label: 'Work Study', sub: 'AGL factory', username: 'ws.agl', pass: 'password' },
-  { label: 'System Admin', sub: 'station devices', username: 'sysadmin', pass: '1234' },
-];
-
 export default function LoginPage() {
   const { login } = useAuth();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('password');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -63,17 +57,6 @@ export default function LoginPage() {
               {busy ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-
-          <div className="l2-demo">
-            <span className="l2-demo-label">Quick sign-in</span>
-            <div className="l2-demo-row">
-              {DEMO.map((d) => (
-                <button key={d.username} type="button" className="l2-demo-btn" onClick={() => { setUsername(d.username); setPassword(d.pass); }}>
-                  <b>{d.label}</b><span>{d.sub}</span>
-                </button>
-              ))}
-            </div>
-          </div>
 
           <Link to="/" className="l2-back">← Line station &amp; TV board (no sign-in)</Link>
         </div>
