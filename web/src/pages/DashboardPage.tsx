@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useOverview, useDefects } from '../api/hooks';
 import { fmt, pct, facVar, todayStr, prettyDate } from '../lib/format';
 import { Loading } from '../components/ui';
-import { FactoryTargetBars, FactoryEffBars, DefectParetoBars } from '../components/charts';
+import { FactoryTargetBars, FactoryEffBars, DefectDoughnut } from '../components/charts';
 import FitToScreen from '../components/FitToScreen';
 
 const facHex: Record<string, string> = { AGL: '#2563eb', ASL: '#7c3aed', AJL: '#0e9488', ABM: '#db2777' };
@@ -108,10 +108,10 @@ export default function DashboardPage() {
       <div className="sec-title"><h2>Defect Analysis</h2><div className="ln" /></div>
       <div className="grid-2col">
         <div className="card pad">
-          <h3 className="ct">Top Defects (Pareto)</h3>
+          <h3 className="ct">Defect Breakdown</h3>
           <div className="cap">{defects.data ? `${fmt(defects.data.totals.defects)} defects · ${fmt(defects.data.totals.checked)} checked · DHU ${defects.data.totals.dhu}%` : '…'}</div>
           <div className="chart-h" style={{ height: 250 }}>
-            {pareto.length > 0 && <DefectParetoBars labels={pareto.map((d) => d.code)} counts={pareto.map((d) => d.count)} />}
+            {pareto.length > 0 && <DefectDoughnut labels={pareto.map((d) => d.code)} counts={pareto.map((d) => d.count)} />}
           </div>
         </div>
         <div className="card pad">

@@ -4,7 +4,7 @@ import { usePmDashboard, useDevice, useLockDeviceToPm } from '../api/hooks';
 import { fmt, pct, facVar, todayStr, prettyDate } from '../lib/format';
 import { getDeviceId } from '../lib/device';
 import { Loading, StatusPill, useToast } from '../components/ui';
-import { FactoryTargetBars, EfficiencyBars, DefectParetoBars } from '../components/charts';
+import { FactoryTargetBars, EfficiencyBars, DefectDoughnut } from '../components/charts';
 import FitToScreen from '../components/FitToScreen';
 
 const facHex: Record<string, string> = { AGL: '#2563eb', ASL: '#7c3aed', AJL: '#0e9488', ABM: '#db2777' };
@@ -126,9 +126,9 @@ export default function PmDashboardPage() {
             </div>
           </div>
           <div className="card pad pm-cell">
-            <h3 className="ct">Top Defects</h3><div className="cap">Across my lines · {fmt(d.totals.defects)} defects · DHU {d.totals.dhu}%</div>
+            <h3 className="ct">Defect Breakdown</h3><div className="cap">Across my lines · {fmt(d.totals.defects)} defects · DHU {d.totals.dhu}%</div>
             <div className="chart-h grow">
-              {pareto.length > 0 ? <DefectParetoBars labels={pareto.map((c) => c.code)} counts={pareto.map((c) => c.count)} /> : <div className="fullcenter">No defects recorded</div>}
+              {pareto.length > 0 ? <DefectDoughnut labels={pareto.map((c) => c.code)} counts={pareto.map((c) => c.count)} /> : <div className="fullcenter">No defects recorded</div>}
             </div>
           </div>
           <div className="card pad pm-cell">

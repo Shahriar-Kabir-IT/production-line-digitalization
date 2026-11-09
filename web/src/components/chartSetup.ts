@@ -5,39 +5,68 @@ import {
   BarElement,
   LineElement,
   PointElement,
+  ArcElement,
   BarController,
   LineController,
+  DoughnutController,
   Filler,
   Tooltip,
   Legend,
 } from 'chart.js';
 
-Chart.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, BarController, LineController, Filler, Tooltip, Legend);
+Chart.register(
+  CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement,
+  BarController, LineController, DoughnutController, Filler, Tooltip, Legend,
+);
+
+// Softer global defaults for a more polished feel.
+Chart.defaults.font.family = "'IBM Plex Mono'";
+Chart.defaults.animation = { duration: 700, easing: 'easeOutQuart' } as typeof Chart.defaults.animation;
 
 export const C = {
   ink: '#131d2e',
   ink2: '#4e5d77',
   ink3: '#8794ab',
-  grid: '#eaeef6',
+  grid: '#eef2f8',
   good: '#0f8a5b',
-  warn: '#a96a06',
-  crit: '#cc3a3a',
+  warn: '#d1890a',
+  crit: '#e0443e',
   brand: '#2b57d6',
 };
 export const facColor: Record<string, string> = { AGL: '#2563eb', ASL: '#7c3aed', AJL: '#0e9488', ABM: '#db2777' };
 
+// Harmonious categorical palette for the defect doughnut (up to 12 slices).
+export const palette = [
+  '#2b57d6', '#7c3aed', '#0e9488', '#db2777', '#f59e0b', '#0ea5e9',
+  '#16a34a', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316', '#64748b',
+];
+
 export const font = { family: "'IBM Plex Mono'", size: 11 };
 
 export const tooltipStyle = {
-  backgroundColor: '#131d2e',
+  backgroundColor: 'rgba(16,24,40,.94)',
   titleColor: '#fff',
-  bodyColor: '#d7deeb',
-  padding: 10,
-  cornerRadius: 8,
+  bodyColor: '#e6ebf5',
+  padding: 11,
+  cornerRadius: 10,
+  borderColor: 'rgba(255,255,255,.08)',
+  borderWidth: 1,
   usePointStyle: true,
   boxWidth: 9,
   boxHeight: 9,
+  titleFont: { family: "'IBM Plex Mono'", size: 11.5, weight: 'bold' as const },
+  bodyFont: { family: "'IBM Plex Mono'", size: 12 },
 };
+
+/** A vertical top→bottom gradient from a solid color, for bars/areas. */
+export function vGradient(chart: Chart, color: string, alphaTop = 'ff', alphaBottom = 'b0'): CanvasGradient | string {
+  const area = chart.chartArea;
+  if (!area) return color;
+  const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+  g.addColorStop(0, color + alphaTop);
+  g.addColorStop(1, color + alphaBottom);
+  return g;
+}
 
 /** Horizontal target line plugin for bar charts. */
 export function targetLinePlugin(yValue: number, label = 'Target') {
@@ -60,6 +89,29 @@ export function targetLinePlugin(yValue: number, label = 'Target') {
       ctx.font = "600 10px 'IBM Plex Mono'";
       ctx.textAlign = 'right';
       ctx.fillText(`${label} ${yValue}%`, right - 4, y - 5);
+      ctx.restore();
+    },
+  };
+}
+
+/** Center label for a doughnut (big total + caption). */
+export function doughnutCenter(total: number, caption = 'defects') {
+  return {
+    id: 'doughnut-center-' + Math.random().toString(36).slice(2),
+    afterDraw(chart: Chart) {
+      const meta = chart.getDatasetMeta(0);
+      const arc = meta?.data?.[0] as unknown as { x: number; y: number } | undefined;
+      if (!arc) return;
+      const { ctx } = chart;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = C.ink;
+      ctx.font = "800 26px 'Barlow Semi Condensed', 'IBM Plex Mono'";
+      ctx.fillText(total.toLocaleString(), arc.x, arc.y - 6);
+      ctx.fillStyle = C.ink3;
+      ctx.font = "600 10px 'IBM Plex Mono'";
+      ctx.fillText(caption.toUpperCase(), arc.x, arc.y + 14);
       ctx.restore();
     },
   };
