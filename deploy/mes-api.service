@@ -7,7 +7,7 @@ After=network.target
 Type=simple
 User=app
 WorkingDirectory=/home/app/mes/server
-ExecStart=/usr/local/bin/node dist/index.js
+ExecStart=/usr/local/bin/node dist/src/index.js
 Environment=NODE_ENV=production
 Restart=always
 RestartSec=5
