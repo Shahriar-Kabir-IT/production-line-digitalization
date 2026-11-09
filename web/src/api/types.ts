@@ -76,6 +76,14 @@ export interface Device {
 }
 export interface SysOverview { factories: number; lines: number; users: number; devices: number; lockedDevices: number; }
 
+export type ManagedRole = 'SUPER_ADMIN' | 'WORK_STUDY' | 'SYS_ADMIN' | 'PRODUCTION_MANAGER';
+export interface SysUser {
+  id: string; username: string; name: string; role: ManagedRole;
+  factoryId: string | null; factoryCode: string | null;
+  managedLineIds: string[]; managedLines: number;
+  isActive: boolean; createdAt: string;
+}
+
 export interface PmLite { id: string; name: string; factory: string | null; factoryName: string | null; lineCount: number; }
 
 export interface PmDashboard {
