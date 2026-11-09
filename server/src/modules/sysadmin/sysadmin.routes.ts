@@ -47,7 +47,7 @@ sysadminRouter.delete('/devices/:id', asyncHandler(async (req, res) => res.json(
 // User management — create/edit/remove the people who can log in.
 // Roles that are scoped to a single factory must carry a factoryId.
 // ---------------------------------------------------------------------------
-const MANAGED_ROLES = ['SUPER_ADMIN', 'WORK_STUDY', 'SYS_ADMIN', 'PRODUCTION_MANAGER'] as const;
+const MANAGED_ROLES = ['SUPER_ADMIN', 'EXECUTIVE', 'WORK_STUDY', 'SYS_ADMIN', 'PRODUCTION_MANAGER'] as const;
 const needsFactory = (r: string) => r === 'WORK_STUDY' || r === 'PRODUCTION_MANAGER';
 
 sysadminRouter.get(

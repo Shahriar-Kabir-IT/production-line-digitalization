@@ -1,4 +1,4 @@
-export type Role = 'SUPER_ADMIN' | 'WORK_STUDY' | 'LINE_WORKER' | 'SYS_ADMIN' | 'PRODUCTION_MANAGER';
+export type Role = 'SUPER_ADMIN' | 'WORK_STUDY' | 'LINE_WORKER' | 'SYS_ADMIN' | 'PRODUCTION_MANAGER' | 'EXECUTIVE';
 export type Status = 'good' | 'warn' | 'crit';
 export type HourState = 'locked' | 'open' | 'upcoming';
 
@@ -76,7 +76,7 @@ export interface Device {
 }
 export interface SysOverview { factories: number; lines: number; users: number; devices: number; lockedDevices: number; }
 
-export type ManagedRole = 'SUPER_ADMIN' | 'WORK_STUDY' | 'SYS_ADMIN' | 'PRODUCTION_MANAGER';
+export type ManagedRole = 'SUPER_ADMIN' | 'EXECUTIVE' | 'WORK_STUDY' | 'SYS_ADMIN' | 'PRODUCTION_MANAGER';
 export interface SysUser {
   id: string; username: string; name: string; role: ManagedRole;
   factoryId: string | null; factoryCode: string | null;

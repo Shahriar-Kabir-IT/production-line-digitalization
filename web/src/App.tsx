@@ -17,10 +17,12 @@ import LineTVPage from './pages/LineTVPage';
 import SysAdminPage from './pages/SysAdminPage';
 import PmDashboardPage from './pages/PmDashboardPage';
 import PmSelectPage from './pages/PmSelectPage';
+import ExecutivePage from './pages/ExecutivePage';
 
 export function homePath(role: Role): string {
   if (role === 'SYS_ADMIN') return '/sysadmin';
   if (role === 'PRODUCTION_MANAGER') return '/pm';
+  if (role === 'EXECUTIVE') return '/executive';
   return '/dashboard';
 }
 
@@ -70,8 +72,9 @@ export default function App() {
 
       {/* auth */}
       <Route path="/login" element={user ? <Navigate to={homePath(user.role)} replace /> : <LoginPage />} />
-      <Route path="/dashboard" element={<Protected roles={['SUPER_ADMIN', 'WORK_STUDY']}><DashboardPage /></Protected>} />
-      <Route path="/lines" element={<Protected roles={['SUPER_ADMIN', 'WORK_STUDY']}><LinesPage /></Protected>} />
+      <Route path="/executive" element={<Protected roles={['EXECUTIVE', 'SUPER_ADMIN']}><ExecutivePage /></Protected>} />
+      <Route path="/dashboard" element={<Protected roles={['SUPER_ADMIN', 'WORK_STUDY', 'EXECUTIVE']}><DashboardPage /></Protected>} />
+      <Route path="/lines" element={<Protected roles={['SUPER_ADMIN', 'WORK_STUDY', 'EXECUTIVE']}><LinesPage /></Protected>} />
       <Route path="/plan" element={<Protected roles={['SUPER_ADMIN', 'WORK_STUDY']}><WorkStudyPage /></Protected>} />
       <Route path="/sysadmin" element={<Protected roles={['SYS_ADMIN']}><SysAdminPage /></Protected>} />
 
