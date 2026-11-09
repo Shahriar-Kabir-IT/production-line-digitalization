@@ -51,7 +51,7 @@ model Line {
 model Device {
   id           String   @id // client-generated device id (stored in localStorage)
   name         String?
-  ipAddress    String? // the PC's network address — the anti-tamper anchor for the lock
+  ipAddress    String? // the PC's network address — display only (lock is keyed to the device id, not IP)
   locked       Boolean  @default(false)
   lockedLine   Line?    @relation(fields: [lockedLineId], references: [id])
   lockedLineId String? // a QC-station PC locked to one line
