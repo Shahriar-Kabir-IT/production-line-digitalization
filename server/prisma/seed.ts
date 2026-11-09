@@ -1,6 +1,7 @@
 import { PrismaClient, Role } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
-import { FACTORY_MAP, DEFECT_CODES } from '../src/lib/constants';
+import { FACTORY_MAP, DEFECT_CODES, PM_ALLOCATION, pmUsername } from '../src/lib/constants';
 
 const prisma = new PrismaClient();
 
@@ -18,10 +19,11 @@ async function main() {
     await prisma.defectCode.upsert({ where: { code: d.code }, update: { name: d.name, sortOrder: i }, create: { code: d.code, name: d.name, sortOrder: i } });
   }
 
+  // Keep sysadmin present, but never reset a password that may have been changed in production.
   const sysHash = await bcrypt.hash('1234', 10);
   await prisma.user.upsert({
     where: { username: 'sysadmin' },
-    update: { passwordHash: sysHash, role: Role.SYS_ADMIN, name: 'System Administrator', isActive: true },
+    update: { role: Role.SYS_ADMIN, name: 'System Administrator', isActive: true },
     create: { username: 'sysadmin', name: 'System Administrator', passwordHash: sysHash, role: Role.SYS_ADMIN },
   });
 
@@ -36,12 +38,32 @@ async function main() {
     }
   }
 
+  // Production Managers + their line allocation. The PM board is a NO-LOGIN public
+  // kiosk, so each PM is a record used only to hold the lines they're responsible
+  // for; they get an unusable random password so no one can sign in as them.
+  for (const alloc of PM_ALLOCATION) {
+    const factory = await prisma.factory.findUnique({ where: { code: alloc.factory } });
+    if (!factory) continue;
+    const username = pmUsername(alloc.factory, alloc.pm);
+    const name = `${alloc.pm} — ${alloc.factory}`;
+    const pmUser = await prisma.user.upsert({
+      where: { username },
+      update: { factoryId: factory.id, role: Role.PRODUCTION_MANAGER, name },
+      create: { username, name, passwordHash: await bcrypt.hash(randomBytes(24).toString('hex'), 10), role: Role.PRODUCTION_MANAGER, factoryId: factory.id },
+    });
+    for (const lineName of alloc.lines) {
+      await prisma.line.updateMany({ where: { factoryId: factory.id, name: lineName }, data: { pmUserId: pmUser.id } });
+    }
+  }
+
   const counts = {
     factories: await prisma.factory.count(),
     lines: await prisma.line.count(),
     defectCodes: await prisma.defectCode.count(),
     buyers: await prisma.buyer.count(),
     users: await prisma.user.count(),
+    pms: await prisma.user.count({ where: { role: Role.PRODUCTION_MANAGER } }),
+    pmLines: await prisma.line.count({ where: { pmUserId: { not: null } } }),
   };
   // eslint-disable-next-line no-console
   console.log('✓ Seed complete', counts, '— login: sysadmin / 1234');
