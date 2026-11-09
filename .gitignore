@@ -9,3 +9,6 @@ coverage/
 web/dist/
 server/dist/
 .vite/
+
+# TypeScript build cache
+*.tsbuildinfo
