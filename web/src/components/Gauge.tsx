@@ -17,13 +17,25 @@ export default function Gauge({ value, targetEff, status }: { value: number; tar
   const ix = CX + (R - 13) * Math.cos(ang);
   const iy = CY - (R - 13) * Math.sin(ang);
 
+  const gid = `g-${status}`;
+  const light = { good: '#34d399', warn: '#f5c451', crit: '#f87171' }[status];
   return (
     <svg viewBox="0 0 200 122" width="100%" role="img" aria-label={`Efficiency ${value}%`}>
-      <path d="M14 100 A86 86 0 0 1 186 100" fill="none" stroke="#e7ecf4" strokeWidth="15" strokeLinecap="round" />
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor={light} />
+          <stop offset="1" stopColor={col} />
+        </linearGradient>
+        <filter id={`glow-${status}`} x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor={col} floodOpacity="0.28" />
+        </filter>
+      </defs>
+      <path d="M14 100 A86 86 0 0 1 186 100" fill="none" stroke="#e9edf5" strokeWidth="15" strokeLinecap="round" />
       <path
         d="M14 100 A86 86 0 0 1 186 100"
-        fill="none" stroke={col} strokeWidth="15" strokeLinecap="round"
-        strokeDasharray={circ} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset .6s ease' }}
+        fill="none" stroke={`url(#${gid})`} strokeWidth="15" strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={off} filter={`url(#glow-${status})`}
+        style={{ transition: 'stroke-dashoffset .6s ease' }}
       />
       <line x1={ix} y1={iy} x2={mx} y2={my} stroke="#131d2e" strokeWidth="2.5" />
       <text x={mx} y={my - 7} fill="#4e5d77" fontSize="9" textAnchor="middle" fontFamily="IBM Plex Mono">TGT {targetEff.toFixed(0)}</text>
