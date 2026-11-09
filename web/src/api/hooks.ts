@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import client from './client';
-import type { Board, DefectAnalytics, Device, Factory, LineRow, Overview, PlanRecord, PmDashboard, PmLite, Station, SysOverview } from './types';
+import type { Board, DefectAnalytics, Device, Factory, LineRow, ManagedRole, Overview, PlanRecord, PmDashboard, PmLite, Station, SysOverview, SysUser } from './types';
 
 // ---- authenticated (Work Study / Super Admin) ----
 export function useFactories() {
@@ -120,6 +120,22 @@ export function useSysDeviceAction() {
     lock: useMutation({ mutationFn: async (v: { id: string; lineId: string }) => (await client.post(`/sysadmin/devices/${v.id}/lock`, { lineId: v.lineId })).data, onSuccess: refresh }),
     rename: useMutation({ mutationFn: async (v: { id: string; name: string }) => (await client.patch(`/sysadmin/devices/${v.id}`, { name: v.name })).data, onSuccess: refresh }),
     remove: useMutation({ mutationFn: async (id: string) => (await client.delete(`/sysadmin/devices/${id}`)).data, onSuccess: refresh }),
+  };
+}
+
+export function useSysUsers() {
+  return useQuery({ queryKey: ['sysUsers'], queryFn: async () => (await client.get<{ users: SysUser[] }>('/sysadmin/users')).data.users });
+}
+export type NewUser = { username: string; name: string; password: string; role: ManagedRole; factoryId?: string | null };
+export type EditUser = { id: string; name?: string; role?: ManagedRole; factoryId?: string | null; isActive?: boolean; password?: string };
+export function useSysUserActions() {
+  const qc = useQueryClient();
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['sysUsers'] }); qc.invalidateQueries({ queryKey: ['sysOverview'] }); };
+  return {
+    create: useMutation({ mutationFn: async (v: NewUser) => (await client.post('/sysadmin/users', v)).data, onSuccess: refresh }),
+    update: useMutation({ mutationFn: async ({ id, ...rest }: EditUser) => (await client.patch(`/sysadmin/users/${id}`, rest)).data, onSuccess: refresh }),
+    remove: useMutation({ mutationFn: async (id: string) => (await client.delete(`/sysadmin/users/${id}`)).data, onSuccess: refresh }),
+    setLines: useMutation({ mutationFn: async (v: { id: string; lineIds: string[] }) => (await client.patch(`/sysadmin/users/${v.id}/lines`, { lineIds: v.lineIds })).data, onSuccess: refresh }),
   };
 }
 
