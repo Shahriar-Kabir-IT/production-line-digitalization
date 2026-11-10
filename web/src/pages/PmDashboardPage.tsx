@@ -128,7 +128,7 @@ export default function PmDashboardPage() {
           <div className="card pad pm-cell">
             <h3 className="ct">Defect Breakdown</h3><div className="cap">Across my lines · {fmt(d.totals.defects)} defects · DHU {d.totals.dhu}%</div>
             <div className="chart-h grow">
-              {pareto.length > 0 ? <DefectDoughnut labels={pareto.map((c) => c.code)} counts={pareto.map((c) => c.count)} /> : <div className="fullcenter">No defects recorded</div>}
+              {pareto.length > 0 ? <DefectDoughnut labels={pareto.map((c) => c.name)} counts={pareto.map((c) => c.count)} /> : <div className="fullcenter">No defects recorded</div>}
             </div>
           </div>
           <div className="card pad pm-cell">
