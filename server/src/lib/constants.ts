@@ -46,6 +46,7 @@ export const DEFECT_CODES: { code: string; name: string }[] = [
   { code: 'NM', name: 'Number Mistake' },
   { code: 'O', name: 'Open Stitch' },
   { code: 'OV', name: 'Over / Short Stitch' },
+  { code: 'OF', name: 'Off / Poor Shape' },
   { code: 'P', name: 'Puckering' },
   { code: 'PM', name: 'Process Missing' },
   { code: 'PL', name: 'Pleat' },
@@ -58,10 +59,9 @@ export const DEFECT_CODES: { code: string; name: string }[] = [
   { code: 'T', name: 'Twisting' },
   { code: 'TT', name: 'Thread Tension Loose' },
   { code: 'U', name: 'Uneven Stitch' },
-  { code: 'UP', name: 'Unparallel Stitch' },
-  { code: 'V', name: 'V-Shape' },
-  { code: 'SHP', name: 'Shape' },
-  { code: 'Z', name: 'Wave' },
+  { code: 'UP', name: 'Un Parallel Stitch' },
+  { code: 'V', name: '"V" Shape' },
+  { code: 'Z', name: 'Zipper Wavy' },
 ];
 
 // Factory → line map (source of truth for the seed).
