@@ -67,9 +67,13 @@ export const tooltipStyle = {
 export function vGradient(chart: Chart, color: string, alphaTop = 'ff', alphaBottom = 'b0'): CanvasGradient | string {
   const area = chart.chartArea;
   if (!area) return color;
+  // Only #rrggbb colors take an appended hex alpha; anything else (e.g. 'transparent'
+  // for an empty hour) is used as-is — appending to it makes an invalid color that
+  // throws in addColorStop and blanks the whole chart.
+  const isHex = /^#[0-9a-fA-F]{6}$/.test(color);
   const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
-  g.addColorStop(0, color + alphaTop);
-  g.addColorStop(1, color + alphaBottom);
+  g.addColorStop(0, isHex ? color + alphaTop : color);
+  g.addColorStop(1, isHex ? color + alphaBottom : color);
   return g;
 }
 
