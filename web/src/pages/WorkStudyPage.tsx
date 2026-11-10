@@ -20,6 +20,7 @@ export default function WorkStudyPage() {
   const [smv, setSmv] = useState(16);
   const [manpower, setManpower] = useState(55);
   const [dayTarget, setDayTarget] = useState(1700);
+  const [workingHours, setWorkingHours] = useState(PLANNED_HOURS);
 
   // default factory/line once factories load
   useEffect(() => {
@@ -48,24 +49,26 @@ export default function WorkStudyPage() {
       setSmv(plan.data.smv);
       setManpower(plan.data.manpower);
       setDayTarget(plan.data.dayTarget);
+      setWorkingHours(plan.data.plannedHours ?? PLANNED_HOURS);
     } else if (plan.isFetched && !plan.data) {
       setBuyerName(''); setStyle('');
     }
   }, [plan.data, plan.isFetched, lineId, date]);
 
   const derived = useMemo(() => {
-    const available = manpower * 60 * PLANNED_HOURS;
+    const hours = workingHours > 0 ? workingHours : PLANNED_HOURS;
+    const available = manpower * 60 * hours;
     const std = dayTarget * smv;
     const targetEff = available ? (std / available) * 100 : 0;
-    return { hourlyTarget: Math.round(dayTarget / PLANNED_HOURS), targetEff, std, available };
-  }, [smv, manpower, dayTarget]);
+    return { hourlyTarget: Math.round(dayTarget / hours), targetEff, std, available };
+  }, [smv, manpower, dayTarget, workingHours]);
 
   if (factories.isLoading) return <div className="page"><Loading /></div>;
 
   async function onSave() {
     if (!lineId) return;
     try {
-      await save.mutateAsync({ lineId, date, buyerName: buyerName || 'N/A', style: style || 'N/A', smv: Number(smv), manpower: Number(manpower), dayTarget: Number(dayTarget), plannedHours: PLANNED_HOURS });
+      await save.mutateAsync({ lineId, date, buyerName: buyerName || 'N/A', style: style || 'N/A', smv: Number(smv), manpower: Number(manpower), dayTarget: Number(dayTarget), plannedHours: Number(workingHours) || PLANNED_HOURS });
       toast('Line plan saved');
     } catch (e: any) {
       toast(e?.response?.data?.error || 'Could not save', 'err');
@@ -120,7 +123,10 @@ export default function WorkStudyPage() {
             <div className="field"><label>SMV</label><input className="input tnum" type="number" step="0.1" value={smv} onChange={(e) => setSmv(+e.target.value)} /></div>
             <div className="field"><label>Manpower (M/P)</label><input className="input tnum" type="number" value={manpower} onChange={(e) => setManpower(+e.target.value)} /></div>
           </div>
-          <div className="field" style={{ marginTop: 14 }}><label>Day Target (pcs)</label><input className="input tnum" type="number" value={dayTarget} onChange={(e) => setDayTarget(+e.target.value)} /></div>
+          <div className="grid2" style={{ marginTop: 14 }}>
+            <div className="field"><label>Day Target (pcs)</label><input className="input tnum" type="number" value={dayTarget} onChange={(e) => setDayTarget(+e.target.value)} /></div>
+            <div className="field"><label>Working Hours</label><input className="input tnum" type="number" min={1} max={PLANNED_HOURS} value={workingHours} onChange={(e) => setWorkingHours(Math.max(1, Math.min(PLANNED_HOURS, Math.floor(+e.target.value) || 1)))} /><span className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Productive hours for this line (1–{PLANNED_HOURS})</span></div>
+          </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
             <button className="btn primary" onClick={onSave} disabled={save.isPending || !lineId}>
