@@ -5,6 +5,7 @@ import { Loading, useToast } from '../components/ui';
 
 const BUYERS = ['H&M', 'KMART', 'LC Waikiki', 'S&G', 'ZXY', 'GTGS', 'Zara', 'Primark', 'C&A', 'Lindex', 'Next', 'Decathlon'];
 const PLANNED_HOURS = 11;
+const MAX_HOURS = 14;
 
 export default function WorkStudyPage() {
   const toast = useToast();
@@ -20,7 +21,9 @@ export default function WorkStudyPage() {
   const [smv, setSmv] = useState(16);
   const [manpower, setManpower] = useState(55);
   const [dayTarget, setDayTarget] = useState(1700);
-  const [workingHours, setWorkingHours] = useState(PLANNED_HOURS);
+  const [workingHours, setWorkingHours] = useState<string>(String(PLANNED_HOURS));
+  // numeric working hours used for calculations & saving (free-typed string → clamped 1..MAX)
+  const whNum = (() => { const n = Math.floor(Number(workingHours)); return n >= 1 ? Math.min(n, MAX_HOURS) : PLANNED_HOURS; })();
 
   // default factory/line once factories load
   useEffect(() => {
@@ -49,26 +52,25 @@ export default function WorkStudyPage() {
       setSmv(plan.data.smv);
       setManpower(plan.data.manpower);
       setDayTarget(plan.data.dayTarget);
-      setWorkingHours(plan.data.plannedHours ?? PLANNED_HOURS);
+      setWorkingHours(String(plan.data.plannedHours ?? PLANNED_HOURS));
     } else if (plan.isFetched && !plan.data) {
       setBuyerName(''); setStyle('');
     }
   }, [plan.data, plan.isFetched, lineId, date]);
 
   const derived = useMemo(() => {
-    const hours = workingHours > 0 ? workingHours : PLANNED_HOURS;
-    const available = manpower * 60 * hours;
+    const available = manpower * 60 * whNum;
     const std = dayTarget * smv;
     const targetEff = available ? (std / available) * 100 : 0;
-    return { hourlyTarget: Math.round(dayTarget / hours), targetEff, std, available };
-  }, [smv, manpower, dayTarget, workingHours]);
+    return { hourlyTarget: Math.round(dayTarget / whNum), targetEff, std, available };
+  }, [smv, manpower, dayTarget, whNum]);
 
   if (factories.isLoading) return <div className="page"><Loading /></div>;
 
   async function onSave() {
     if (!lineId) return;
     try {
-      await save.mutateAsync({ lineId, date, buyerName: buyerName || 'N/A', style: style || 'N/A', smv: Number(smv), manpower: Number(manpower), dayTarget: Number(dayTarget), plannedHours: Number(workingHours) || PLANNED_HOURS });
+      await save.mutateAsync({ lineId, date, buyerName: buyerName || 'N/A', style: style || 'N/A', smv: Number(smv), manpower: Number(manpower), dayTarget: Number(dayTarget), plannedHours: whNum });
       toast('Line plan saved');
     } catch (e: any) {
       toast(e?.response?.data?.error || 'Could not save', 'err');
@@ -125,7 +127,7 @@ export default function WorkStudyPage() {
           </div>
           <div className="grid2" style={{ marginTop: 14 }}>
             <div className="field"><label>Day Target (pcs)</label><input className="input tnum" type="number" value={dayTarget} onChange={(e) => setDayTarget(+e.target.value)} /></div>
-            <div className="field"><label>Working Hours</label><input className="input tnum" type="number" min={1} max={PLANNED_HOURS} value={workingHours} onChange={(e) => setWorkingHours(Math.max(1, Math.min(PLANNED_HOURS, Math.floor(+e.target.value) || 1)))} /><span className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Productive hours for this line (1–{PLANNED_HOURS})</span></div>
+            <div className="field"><label>Working Hours</label><input className="input tnum" type="number" min={1} max={MAX_HOURS} value={workingHours} onChange={(e) => setWorkingHours(e.target.value)} onBlur={() => setWorkingHours(String(whNum))} /><span className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>Productive hours for this line (1–{MAX_HOURS})</span></div>
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
@@ -145,11 +147,11 @@ export default function WorkStudyPage() {
             <div className="row"><span className="k">Target efficiency</span><span className="v" style={{ color: `var(--${effClass})` }}>{derived.targetEff.toFixed(1)}%</span></div>
             <div className="row"><span className="k">Std. minutes / day</span><span className="v">{fmt(Math.round(derived.std))} min</span></div>
             <div className="row"><span className="k">Available minutes / day</span><span className="v">{fmt(derived.available)} min</span></div>
-            <div className="row"><span className="k">Planned hours</span><span className="v">{PLANNED_HOURS}</span></div>
+            <div className="row"><span className="k">Planned hours</span><span className="v">{whNum}</span></div>
           </div>
           <div className="eyebrow" style={{ marginTop: 16 }}>Target efficiency formula</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: 'var(--ink-2)', marginTop: 7, lineHeight: 1.7 }}>
-            Eff% = (Target × SMV) ÷ (M/P × 60 × {PLANNED_HOURS}) × 100
+            Eff% = (Target × SMV) ÷ (M/P × 60 × {whNum}) × 100
           </div>
         </div>
       </div>

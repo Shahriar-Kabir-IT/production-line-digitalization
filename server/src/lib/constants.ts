@@ -1,10 +1,12 @@
-// Standard working hours on the floor (11 productive hours).
+// Hour slots on the floor — 8am through 10pm, so a line can be planned 1–14 hours.
+// Each line's plan picks how many of these it actually runs (plannedHours).
 export const HOUR_LABELS = [
-  '8–9', '9–10', '10–11', '11–12', '12–1', '1–2', '2–3', '3–4', '4–5', '5–6', '6–7',
+  '8–9', '9–10', '10–11', '11–12', '12–1', '1–2', '2–3', '3–4', '4–5', '5–6', '6–7', '7–8', '8–9 PM', '9–10 PM',
 ];
 // 24h clock start of each hour slot (used for time-locking).
-export const HOUR_START_24 = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
-export const PLANNED_HOURS = HOUR_LABELS.length;
+export const HOUR_START_24 = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+export const PLANNED_HOURS = 11;           // default productive hours for a new plan
+export const MAX_PLANNED_HOURS = HOUR_LABELS.length; // 14 — the most a line can be planned
 
 // Factory timezone — hour-locking is evaluated against this clock.
 export const FACTORY_TZ = 'Asia/Dhaka';
