@@ -83,19 +83,20 @@ export function computeLineMetrics(plan: PlanInput, entries: EntryInput[], hourL
   const efficiency: (number | null)[] = [];
   const dhuSeries: (number | null)[] = [];
   const pace: number[] = [];
+  // Plot each worked hour at its own position so the achieved line shows no matter
+  // which hour data entry started in. Hours with no entry are gaps (null); the
+  // cumulative keeps running across them.
   let run = 0;
-  let seenGap = false;
   for (let i = 0; i < hourLabels.length; i++) {
     pace.push(Math.round(hourlyTarget * (i + 1)));
     const e = byIndex.get(i);
-    if (e && !seenGap) {
+    if (e) {
       run += e.checkedQty;
       output.push(e.checkedQty);
       cumulative.push(run);
       efficiency.push(+hourlyEfficiency(e.checkedQty, plan.smv, plan.manpower).toFixed(1));
       dhuSeries.push(e.checkedQty > 0 ? +((e.defectCount * 100) / e.checkedQty).toFixed(1) : 0);
     } else {
-      seenGap = true;
       output.push(null); cumulative.push(null); efficiency.push(null); dhuSeries.push(null);
     }
   }
