@@ -24,13 +24,14 @@ const BAR = { borderRadius: 7, borderSkipped: false as const };
 export function TargetAchievedChart({ labels, pace, cumulative, color, suggestedMax }: {
   labels: string[]; pace: number[]; cumulative: (number | null)[]; color: string; suggestedMax: number;
 }) {
+  const lastIdx = cumulative.reduce((last, v, i) => (v != null ? i : last), -1);
   const data: ChartData<'line'> = {
     labels,
     datasets: [
       { label: 'Required pace', data: pace, borderColor: C.ink3, borderWidth: 2, borderDash: [5, 5], pointRadius: 0, tension: 0.25 },
       {
         label: 'Achieved', data: cumulative as number[], borderColor: color, borderWidth: 3.5, tension: 0.35, spanGaps: false,
-        pointRadius: (ctx) => (ctx.dataIndex === cumulative.filter((v) => v != null).length - 1 ? 6 : 0),
+        pointRadius: (ctx) => (ctx.dataIndex === lastIdx ? 6 : 0),
         pointBackgroundColor: color, pointBorderColor: '#fff', pointBorderWidth: 2.5, pointHoverRadius: 7,
         fill: true,
         backgroundColor: (ctx) => {
