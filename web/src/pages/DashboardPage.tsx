@@ -5,7 +5,6 @@ import { useOverview, useDefects } from '../api/hooks';
 import { fmt, pct, facVar, todayStr, prettyDate } from '../lib/format';
 import { Loading } from '../components/ui';
 import { FactoryTargetBars, FactoryEffBars, DefectDoughnut } from '../components/charts';
-import FitToScreen from '../components/FitToScreen';
 
 const facHex: Record<string, string> = { AGL: '#2563eb', ASL: '#7c3aed', AJL: '#0e9488', ABM: '#db2777' };
 
@@ -13,8 +12,6 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [date, setDate] = useState(todayStr());
-  const [fit, setFit] = useState(() => { try { return localStorage.getItem('mes_fit_dash') === '1'; } catch { return false; } });
-  function toggleFit() { setFit((v) => { const nv = !v; try { localStorage.setItem('mes_fit_dash', nv ? '1' : '0'); } catch {} return nv; }); }
 
   const overview = useOverview(date);
   const defects = useDefects(date);
@@ -28,7 +25,7 @@ export default function DashboardPage() {
   const rankOf = (id: string) => rankOrder.indexOf(id) + 1;
 
   return (
-    <FitToScreen enabled={fit} designWidth={1500} innerClassName="fit-pad" pageClassName="page">
+    <div className="page">
       <div className="page-head">
         <div>
           <h1>{isSuper ? 'Master Dashboard' : `Factory Dashboard · ${user?.factoryCode}`}</h1>
@@ -36,9 +33,6 @@ export default function DashboardPage() {
         </div>
         <div className="spacer" />
         <div className="field"><label htmlFor="date">Date</label><input id="date" className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: 170 }} /></div>
-        <button className="btn ghost" onClick={toggleFit} title={fit ? 'Fit to screen: on' : 'Fit to screen: off'} aria-label="Toggle fit to screen" style={{ alignSelf: 'flex-end', height: 38 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{fit ? <path d="M9 3H5a2 2 0 00-2 2v4M15 3h4a2 2 0 012 2v4M9 21H5a2 2 0 01-2-2v-4M15 21h4a2 2 0 002-2v-4" /> : <path d="M3 9V5a2 2 0 012-2h4M21 9V5a2 2 0 00-2-2h-4M3 15v4a2 2 0 002 2h4M21 15v4a2 2 0 01-2 2h-4" />}</svg>
-        </button>
       </div>
 
       <div className="summary-strip">
@@ -133,6 +127,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </FitToScreen>
+    </div>
   );
 }
