@@ -8,6 +8,7 @@ import { Loading, useToast } from '../components/ui';
 import type { HourState, Station } from '../api/types';
 
 const LS_KEY = 'mes_station_line';
+const CUSTOM_KEY = 'mes_custom_defects';
 const FLUSH_MS = 350;
 
 export default function StationPage() {
@@ -23,6 +24,33 @@ export default function StationPage() {
 
   const [pickedLineId, setPickedLineId] = useState<string>(() => localStorage.getItem(LS_KEY) || '');
   const [factoryId, setFactoryId] = useState<string>('');
+
+  // Ad-hoc defect codes added at THIS station only (kept on this device).
+  const [customCodes, setCustomCodes] = useState<{ code: string; name: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch { return []; }
+  });
+  const [addOpen, setAddOpen] = useState(false);
+  const [newCode, setNewCode] = useState('');
+  const [newName, setNewName] = useState('');
+  const [addBusy, setAddBusy] = useState(false);
+  function saveCustom(list: { code: string; name: string }[]) {
+    setCustomCodes(list);
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+  }
+  async function addCustomDefect() {
+    const code = newCode.trim().toUpperCase(); const name = newName.trim();
+    if (!code || !name) { toast('Enter a short code and a name', 'err'); return; }
+    setAddBusy(true);
+    try {
+      const r = await client.post<{ code: string; name: string }>('/public/defect-codes', { code, name });
+      if (!customCodes.some((c) => c.code === r.data.code)) saveCustom([...customCodes, { code: r.data.code, name: r.data.name }]);
+      setAddOpen(false); setNewCode(''); setNewName('');
+      toast(`Added "${r.data.code}" to this station`);
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Could not add defect', 'err');
+    } finally { setAddBusy(false); }
+  }
+  function removeCustom(code: string) { saveCustom(customCodes.filter((c) => c.code !== code)); }
 
   // When locked, the line is forced to the device's locked line.
   const lineId = isLocked ? lockedLineId! : pickedLineId;
@@ -165,7 +193,11 @@ export default function StationPage() {
     if (!openHour) return 0;
     return Math.max(0, (openHour.defects[code] ?? 0) + (pendingRef.current[`d:${openIdx}:${code}`] ?? 0));
   };
-  const totalDefShown = openHour ? s.defectCodes.reduce((sum, c) => sum + defectShown(c.code), 0) : 0;
+  // Standard codes (from the server) + this device's ad-hoc codes, de-duplicated.
+  const mergedCodes = [...s.defectCodes, ...customCodes.filter((c) => !s.defectCodes.some((x) => x.code === c.code))];
+  const customSet = new Set(customCodes.map((c) => c.code));
+  const totalKeys = new Set<string>([...mergedCodes.map((c) => c.code), ...(openHour ? Object.keys(openHour.defects) : [])]);
+  const totalDefShown = openHour ? [...totalKeys].reduce((sum, code) => sum + defectShown(code), 0) : 0;
   const hourDhuShown = checkedShown > 0 ? +((totalDefShown * 100) / checkedShown).toFixed(1) : 0;
 
   return (
@@ -236,12 +268,13 @@ export default function StationPage() {
                 <h3 className="ct">Defects — tap a code to add one</h3>
                 <div className="cap">DHU = total defects × 100 ÷ checked quantity. Tap the small − to undo a mistap.</div>
                 <div className="defect-grid">
-                  {s.defectCodes.map((c) => {
+                  {mergedCodes.map((c) => {
                     const cnt = defectShown(c.code);
+                    const isCustom = customSet.has(c.code);
                     return (
-                      <div key={c.code} className={`dbtn ${cnt ? 'has' : ''}`}>
-                        <button className="dbtn-main" onClick={() => bump(`d:${openIdx}:${c.code}`, 1)} title={c.name}>
-                          <span className="dcode">{c.code}</span>
+                      <div key={c.code} className={`dbtn ${cnt ? 'has' : ''} ${isCustom ? 'custom' : ''}`}>
+                        <button className="dbtn-main" onClick={() => bump(`d:${openIdx}:${c.code}`, 1)} title={isCustom ? `${c.name} (added here)` : c.name}>
+                          <span className="dcode">{c.code}{isCustom && <span style={{ color: 'var(--brand)', marginLeft: 3 }}>★</span>}</span>
                           <span className="dname">{c.name}</span>
                           {cnt > 0 && <span className="dcount">{cnt}</span>}
                         </button>
@@ -249,11 +282,47 @@ export default function StationPage() {
                       </div>
                     );
                   })}
+                  <div className="dbtn add-dhu" style={{ border: '1.5px dashed var(--brand)', background: 'var(--brand-050, #eaf0ff)' }}>
+                    <button className="dbtn-main" onClick={() => setAddOpen(true)} title="Add a defect that isn't on the list (shows only on this station)" style={{ color: 'var(--brand)' }}>
+                      <span className="dcode" style={{ fontSize: 22, lineHeight: 1 }}>＋</span>
+                      <span className="dname">Add DHU</span>
+                    </button>
+                  </div>
                 </div>
+                {customCodes.length > 0 && (
+                  <div className="cap" style={{ marginTop: 10 }}>
+                    Added here: {customCodes.map((c) => (
+                      <span key={c.code} style={{ marginRight: 8, whiteSpace: 'nowrap' }}>
+                        <b>{c.code}</b> {c.name} <button className="linklike" onClick={() => removeCustom(c.code)} title="Remove from this station" style={{ color: 'var(--crit)', background: 'none', border: 0, cursor: 'pointer', fontSize: 12 }}>✕</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
         </>
+      )}
+
+      {addOpen && (
+        <div onClick={() => setAddOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(16,22,34,.5)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ padding: 22, width: 'min(420px,100%)' }}>
+            <h3 style={{ margin: '0 0 4px' }}>Add a defect to this station</h3>
+            <div className="cap" style={{ marginBottom: 16 }}>Only this PC shows it. Work Study and the dashboards still see it in the DHU reports.</div>
+            <div className="field" style={{ marginBottom: 12 }}>
+              <label>Code <span className="muted">(short, e.g. ZB)</span></label>
+              <input className="input" value={newCode} maxLength={8} autoCapitalize="characters" placeholder="ZB" onChange={(e) => setNewCode(e.target.value.toUpperCase())} />
+            </div>
+            <div className="field" style={{ marginBottom: 18 }}>
+              <label>Defect name</label>
+              <input className="input" value={newName} maxLength={60} placeholder="Zipper Broken" onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addCustomDefect(); }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="btn ghost" onClick={() => setAddOpen(false)}>Cancel</button>
+              <button className="btn primary" disabled={addBusy} onClick={addCustomDefect}>Add defect</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

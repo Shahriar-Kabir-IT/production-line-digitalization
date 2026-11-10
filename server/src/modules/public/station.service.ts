@@ -18,7 +18,7 @@ export async function getStation(lineId: string, dateInput?: string) {
 
   const [plan, codes] = await Promise.all([
     prisma.workStudyPlan.findUnique({ where: { lineId_date: { lineId, date } }, ...planInclude }),
-    prisma.defectCode.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
+    prisma.defectCode.findMany({ where: { active: true, custom: false }, orderBy: { sortOrder: 'asc' } }),
   ]);
 
   const head = {

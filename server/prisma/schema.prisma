@@ -97,6 +97,7 @@ model DefectCode {
   name      String
   sortOrder Int           @default(0)
   active    Boolean       @default(true)
+  custom    Boolean       @default(false) // added ad-hoc at a station; hidden from the standard grid, still counted in analytics
   tallies   HourlyDefect[]
 }
 
