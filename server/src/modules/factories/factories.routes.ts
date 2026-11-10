@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { asyncHandler } from '../../utils/http';
 import { requireAuth } from '../../middleware/auth';
+import { factoryRank } from '../../lib/constants';
 
 export const factoriesRouter = Router();
 
@@ -14,11 +15,10 @@ factoriesRouter.get(
     const user = req.user!;
     const where =
       user.role === Role.SUPER_ADMIN ? {} : user.factoryId ? { id: user.factoryId } : { id: '__none__' };
-    const factories = await prisma.factory.findMany({
+    const factories = (await prisma.factory.findMany({
       where,
-      orderBy: { code: 'asc' },
       include: { lines: { orderBy: { name: 'asc' }, select: { id: true, name: true, isActive: true } } },
-    });
+    })).sort((a, b) => factoryRank(a.code) - factoryRank(b.code));
     res.json({ factories });
   }),
 );

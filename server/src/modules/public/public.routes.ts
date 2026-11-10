@@ -7,6 +7,7 @@ import { Role } from '@prisma/client';
 import { getStation, adjustCheck, adjustDefect } from './station.service';
 import { getOrRegisterDevice, lockDevice, lockDeviceToPm } from '../sysadmin/device.service';
 import { clientIp } from '../../lib/ip';
+import { factoryRank } from '../../lib/constants';
 
 // No-login kiosk endpoints: the QC station and the TV board.
 export const publicRouter = Router();
@@ -14,10 +15,9 @@ export const publicRouter = Router();
 publicRouter.get(
   '/factories',
   asyncHandler(async (_req, res) => {
-    const factories = await prisma.factory.findMany({
-      orderBy: { code: 'asc' },
+    const factories = (await prisma.factory.findMany({
       include: { lines: { orderBy: { name: 'asc' }, select: { id: true, name: true, isActive: true } } },
-    });
+    })).sort((a, b) => factoryRank(a.code) - factoryRank(b.code));
     res.json({ factories });
   }),
 );

@@ -87,3 +87,11 @@ export const FACTORY_MAP: { code: string; name: string; lines: string[] }[] = [
     lines: ['1', '2', '3', '4', '5', '9', '10', '11', '12', '13', '17', '18', '19', '20', '21', '6', '7', '8', '14', '15', '16'],
   },
 ];
+
+// Canonical factory display order — always AGL, ASL, AJL, ABM (the FACTORY_MAP order),
+// never alphabetical. Use factoryRank() to sort anything shown to users.
+export const FACTORY_SEQUENCE = FACTORY_MAP.map((f) => f.code);
+export const factoryRank = (code: string | null | undefined): number => {
+  const i = FACTORY_SEQUENCE.indexOf(code ?? '');
+  return i < 0 ? 999 : i;
+};

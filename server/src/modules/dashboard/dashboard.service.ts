@@ -1,6 +1,6 @@
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
-import { HOUR_LABELS } from '../../lib/constants';
+import { HOUR_LABELS, factoryRank } from '../../lib/constants';
 import { computeLineMetrics, EntryInput, hourlyEfficiency } from '../../utils/metrics';
 import { AuthUser, assertFactoryScope } from '../../middleware/auth';
 import { AppError } from '../../utils/http';
@@ -86,14 +86,16 @@ async function plansForScope(user: AuthUser, date: Date, factoryId?: string) {
 
 export async function getLineRows(user: AuthUser, date: Date, factoryId?: string) {
   const plans = await plansForScope(user, date, factoryId);
-  return plans.map(serializeLineRow);
+  // Keep the canonical factory order (AGL, ASL, AJL, ABM); line order preserved within a factory.
+  return plans.map(serializeLineRow).sort((a, b) => factoryRank(a.factory) - factoryRank(b.factory));
 }
 
 export async function getOverview(user: AuthUser, date: Date) {
   const rows = await getLineRows(user, date, undefined);
   const scope = scopedFactoryIds(user);
   const factoryWhere = scope === 'ALL' ? {} : { id: { in: scope } };
-  const factories = await prisma.factory.findMany({ where: factoryWhere, include: { _count: { select: { lines: true } } }, orderBy: { code: 'asc' } });
+  const factories = (await prisma.factory.findMany({ where: factoryWhere, include: { _count: { select: { lines: true } } } }))
+    .sort((a, b) => factoryRank(a.code) - factoryRank(b.code));
 
   const byFactory = factories.map((f) => {
     const fr = rows.filter((r) => r.factoryId === f.id);
@@ -220,11 +222,10 @@ export async function getLineReport(user: AuthUser, lineId: string, date: Date) 
 
 /** List all Production Managers (public — for the PM board selector). */
 export async function listPms() {
-  const pms = await prisma.user.findMany({
+  const pms = (await prisma.user.findMany({
     where: { role: Role.PRODUCTION_MANAGER },
     include: { factory: true, _count: { select: { managedLines: true } } },
-    orderBy: [{ factory: { code: 'asc' } }, { name: 'asc' }],
-  });
+  })).sort((a, b) => factoryRank(a.factory?.code) - factoryRank(b.factory?.code) || a.name.localeCompare(b.name));
   return pms.map((p) => ({
     id: p.id,
     name: p.name,
