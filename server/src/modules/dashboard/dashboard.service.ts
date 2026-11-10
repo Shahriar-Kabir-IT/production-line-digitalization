@@ -34,7 +34,7 @@ export function metricsFor(plan: PlanFull) {
   return computeLineMetrics(
     { smv: plan.smv, manpower: plan.manpower, dayTarget: plan.dayTarget, plannedHours: plan.plannedHours },
     toMetricsInput(plan),
-    HOUR_LABELS,
+    HOUR_LABELS.slice(0, plan.plannedHours),
   );
 }
 
@@ -189,7 +189,7 @@ export async function getLineReport(user: AuthUser, lineId: string, date: Date) 
   const entryByIndex = new Map(plan.entries.map((e) => [e.hourIndex, e]));
   const byCodeMap = new Map<string, number>();
 
-  const hours = HOUR_LABELS.map((label, i) => {
+  const hours = HOUR_LABELS.slice(0, plan.plannedHours).map((label, i) => {
     const e = entryByIndex.get(i);
     const defects: Record<string, number> = {};
     let total = 0;
@@ -289,6 +289,6 @@ export async function getLineBoard(lineId: string, date: Date) {
       dayTarget: plan.dayTarget, plannedHours: plan.plannedHours,
     },
     metrics: m,
-    hourLabels: HOUR_LABELS,
+    hourLabels: HOUR_LABELS.slice(0, plan.plannedHours),
   };
 }

@@ -31,8 +31,9 @@ export async function getStation(lineId: string, dateInput?: string) {
   if (!plan) return { ...head, plan: null, hours: [], metrics: null, hourLabels: HOUR_LABELS, openHourIndex: -1 };
 
   const entryByIndex = new Map(plan.entries.map((e) => [e.hourIndex, e]));
+  const planHourLabels = HOUR_LABELS.slice(0, plan.plannedHours);
   let openHourIndex = -1;
-  const hours = HOUR_LABELS.map((label, i) => {
+  const hours = planHourLabels.map((label, i) => {
     const e = entryByIndex.get(i);
     const defects: Record<string, number> = {};
     let totalDefects = 0;
@@ -52,7 +53,7 @@ export async function getStation(lineId: string, dateInput?: string) {
     plan: { buyer: plan.buyerName, style: plan.style, smv: plan.smv, manpower: plan.manpower, dayTarget: plan.dayTarget, plannedHours: plan.plannedHours },
     hours,
     metrics: metricsFor(plan),
-    hourLabels: HOUR_LABELS,
+    hourLabels: planHourLabels,
     openHourIndex,
   };
 }
