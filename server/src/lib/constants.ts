@@ -23,10 +23,11 @@ export const PM_ALLOCATION: { factory: string; pm: string; floor: string; lines:
   { factory: 'AJL', pm: 'PM 2', floor: '5th', lines: ['G', 'H', 'I', 'J', 'K', 'L'] },
   { factory: 'AJL', pm: 'PM 3', floor: '6th', lines: ['M', 'N', 'O', 'P', 'Q', 'R'] },
   { factory: 'AJL', pm: 'PM 4', floor: '7th', lines: ['S', 'T', 'U', 'V', 'W'] },
-  { factory: 'ABM', pm: 'PM 1', floor: '3rd–4th', lines: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16'] },
+  { factory: 'ABM', pm: 'PM 1 (3rd Floor)', floor: '3rd', lines: ['1', '2', '3', '4', '5', '6', '7', '8'] },
+  { factory: 'ABM', pm: 'PM 1 (4th Floor)', floor: '4th', lines: ['9', '10', '11', '12', '13', '14', '15', '16'] },
   { factory: 'ABM', pm: 'PM 2', floor: '5th', lines: ['17', '18', '19', '20', '21'] },
 ];
-export const pmUsername = (factory: string, pm: string) => `${pm.replace(/\s+/g, '').toLowerCase()}.${factory.toLowerCase()}`;
+export const pmUsername = (factory: string, pm: string) => `${pm.replace(/[^a-z0-9]/gi, '').toLowerCase()}.${factory.toLowerCase()}`;
 
 // Defect-code master (from form Q-SEW006-01). A few faint codes on the scan are
 // best-effort; edit names/codes here and re-seed if the controlled list differs.

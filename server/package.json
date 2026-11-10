@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:studio": "prisma studio",
     "seed": "ts-node --transpile-only prisma/seed.ts",
-    "sync:defects": "ts-node --transpile-only prisma/sync-defects.ts"
+    "sync:defects": "ts-node --transpile-only prisma/sync-defects.ts",
+    "sync:pms": "ts-node --transpile-only prisma/sync-pms.ts"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"
