@@ -21,7 +21,12 @@ Chart.register(
 
 // Softer global defaults for a more polished feel.
 Chart.defaults.font.family = "'IBM Plex Mono'";
-Chart.defaults.animation = { duration: 700, easing: 'easeOutQuart' } as typeof Chart.defaults.animation;
+// Animations OFF: Chart.js crashes ("this._fn is not a function") trying to animate
+// the scriptable CanvasGradient fills, which blanks the whole chart. Rendering the
+// final frame directly keeps the gradients and is instant.
+Chart.defaults.animation = false as unknown as typeof Chart.defaults.animation;
+(Chart.defaults as unknown as { animations: unknown }).animations = {};
+(Chart.defaults as unknown as { transitions: { active: { animation: { duration: number } } } }).transitions = { active: { animation: { duration: 0 } } };
 
 export const C = {
   ink: '#131d2e',
