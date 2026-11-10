@@ -30,6 +30,31 @@ publicRouter.get(
   }),
 );
 
+// Add an ad-hoc defect code from a station (kiosk). Created as `custom` so it stays
+// off the standard grid on every station, but Work Study / dashboards still resolve
+// its name in analytics. The creating device remembers it locally to show the button.
+const newCodeSchema = z.object({
+  code: z.string().trim().min(1).max(8).regex(/^[A-Za-z0-9/\-]+$/, 'Use letters, numbers, - or /'),
+  name: z.string().trim().min(1).max(60),
+});
+publicRouter.post(
+  '/defect-codes',
+  asyncHandler(async (req, res) => {
+    const { code, name } = newCodeSchema.parse(req.body);
+    const CODE = code.toUpperCase();
+    const existing = await prisma.defectCode.findUnique({ where: { code: CODE } });
+    if (existing) {
+      if (!existing.custom) throw new AppError(409, `"${CODE}" is already a standard defect — pick it from the list`);
+      return res.json({ code: existing.code, name: existing.name, reused: true });
+    }
+    const max = await prisma.defectCode.aggregate({ _max: { sortOrder: true } });
+    const created = await prisma.defectCode.create({
+      data: { code: CODE, name, custom: true, active: true, sortOrder: (max._max.sortOrder ?? 0) + 1 },
+    });
+    res.status(201).json({ code: created.code, name: created.name });
+  }),
+);
+
 // TV board (read-only, public display).
 publicRouter.get(
   '/board/:lineId',
