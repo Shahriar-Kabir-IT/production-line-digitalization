@@ -25,17 +25,17 @@ export default function StationPage() {
   const [pickedLineId, setPickedLineId] = useState<string>(() => localStorage.getItem(LS_KEY) || '');
   const [factoryId, setFactoryId] = useState<string>('');
 
-  // Ad-hoc defect codes added at THIS station only (kept on this device).
-  const [customCodes, setCustomCodes] = useState<{ code: string; name: string }[]>(() => {
-    try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch { return []; }
-  });
+  // Ad-hoc defect codes added at THIS station, for TODAY only — they clear at the
+  // next factory-day rollover (the DB code stays so past analytics keep the name).
+  const [customCodes, setCustomCodes] = useState<{ code: string; name: string }[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
   const [addBusy, setAddBusy] = useState(false);
   function saveCustom(list: { code: string; name: string }[]) {
     setCustomCodes(list);
-    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+    const fd = station.data?.now?.dateStr || station.data?.date || '';
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify({ date: fd, codes: list })); } catch { /* ignore */ }
   }
   async function addCustomDefect() {
     const code = newCode.trim().toUpperCase(); const name = newName.trim();
@@ -65,6 +65,17 @@ export default function StationPage() {
   }, [factories.data, factoryId, lineId]);
 
   const station = useStation(lineId || undefined);
+
+  // Load this device's ad-hoc codes for the current factory day; a new day starts empty.
+  const factoryDate = station.data?.now?.dateStr || station.data?.date || '';
+  useEffect(() => {
+    if (!factoryDate) return;
+    try {
+      const v = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '{}');
+      if (v && v.date === factoryDate && Array.isArray(v.codes)) setCustomCodes(v.codes);
+      else { setCustomCodes([]); localStorage.setItem(CUSTOM_KEY, JSON.stringify({ date: factoryDate, codes: [] })); }
+    } catch { setCustomCodes([]); }
+  }, [factoryDate]);
 
   // ---- local accumulation + debounced single-flight flush (instant, glitch-free) ----
   // pendingRef is the synchronous source of truth; `force` re-renders when it changes.
