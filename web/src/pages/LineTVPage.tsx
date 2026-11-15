@@ -79,7 +79,7 @@ export default function LineTVPage() {
             <div className="card kpi" style={{ ['--kpiac' as any]: `var(--${m.status})` }}>
               <div className="label eyebrow">Avg Efficiency</div>
               <div className="value tnum" style={{ color: `var(--${m.status})` }}>{m.avgEff.toFixed(2)}<small> %</small></div>
-              <div className="sub">target {m.targetEff}%</div>
+              <div className="sub">target {m.targetEff.toFixed(2)}%</div>
             </div>
             <div className="card kpi" style={{ ['--kpiac' as any]: m.dhu > 7 ? 'var(--crit)' : m.dhu > 4 ? 'var(--warn)' : 'var(--good)' }}>
               <div className="label eyebrow">D.H.U.</div>
@@ -98,7 +98,7 @@ export default function LineTVPage() {
 
           <div className="card pad">
             <h3 className="ct">Current Line Average Efficiency</h3>
-            <div className="cap">Live gauge &amp; hour-by-hour efficiency vs. the {m.targetEff}% target line</div>
+            <div className="cap">Live gauge &amp; hour-by-hour efficiency vs. the {m.targetEff.toFixed(2)}% target line</div>
             <div className="gaugewrap">
               <div className="gauge"><Gauge value={m.avgEff} targetEff={m.targetEff} status={m.status} /></div>
               <div className="efflegend">

@@ -103,7 +103,7 @@ export default function DashboardPage() {
       <div className="grid-2col">
         <div className="card pad">
           <h3 className="ct">Defect Breakdown</h3>
-          <div className="cap">{defects.data ? `${fmt(defects.data.totals.defects)} defects · ${fmt(defects.data.totals.checked)} checked · DHU ${defects.data.totals.dhu}%` : '…'}</div>
+          <div className="cap">{defects.data ? `${fmt(defects.data.totals.defects)} defects · ${fmt(defects.data.totals.checked)} checked · DHU ${defects.data.totals.dhu.toFixed(2)}%` : '…'}</div>
           <div className="chart-h" style={{ height: 250 }}>
             {pareto.length > 0 && <DefectDoughnut labels={pareto.map((d) => d.name)} counts={pareto.map((d) => d.count)} />}
           </div>
@@ -118,7 +118,7 @@ export default function DashboardPage() {
                   <tr key={l.lineId}>
                     <td><span className="linetag"><span className="dot" style={{ background: facVar(l.factory) }} /><span className="rowlink" onClick={() => nav(`/tv/${l.lineId}`)}>{l.factory} · {l.line}</span></span></td>
                     <td className="num">{fmt(l.checked)}</td><td className="num">{l.defects}</td>
-                    <td className="num" style={{ color: l.dhu > 7 ? 'var(--crit)' : l.dhu > 4 ? 'var(--warn)' : 'var(--good)', fontWeight: 600 }}>{l.dhu}</td>
+                    <td className="num" style={{ color: l.dhu > 7 ? 'var(--crit)' : l.dhu > 4 ? 'var(--warn)' : 'var(--good)', fontWeight: 600 }}>{l.dhu.toFixed(2)}</td>
                   </tr>
                 ))}
                 {(!defects.data || defects.data.byLine.length === 0) && <tr><td colSpan={4} style={{ textAlign: 'center', padding: 22, color: 'var(--ink-3)' }}>No defects recorded yet.</td></tr>}

@@ -255,7 +255,7 @@ export default function StationPage() {
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
               <div className="eyebrow">Day so far</div>
               <div style={{ fontFamily: 'var(--disp)', fontWeight: 700, fontSize: 24 }}>{fmt(m?.achieved ?? 0)} <span className="muted" style={{ fontSize: 15 }}>checked</span></div>
-              <div className="muted" style={{ fontSize: 12.5 }}>Eff {m?.avgEff ?? 0}% · DHU {m?.dhu ?? 0}%</div>
+              <div className="muted" style={{ fontSize: 12.5 }}>Eff {(m?.avgEff ?? 0).toFixed(2)}% · DHU {(m?.dhu ?? 0).toFixed(2)}%</div>
             </div>
           </div>
 
@@ -293,7 +293,7 @@ export default function StationPage() {
                 <div className="kbd-hint">Keyboard: <kbd>↓</kbd> count · <kbd>↑</kbd> undo</div>
                 <div className="counter-foot">
                   <div><span className="muted">Defects</span><b className="tnum">{totalDefShown}</b></div>
-                  <div><span className="muted">Hour DHU</span><b className="tnum" style={{ color: hourDhuShown > 7 ? 'var(--crit)' : hourDhuShown > 4 ? 'var(--warn)' : 'var(--good)' }}>{hourDhuShown}%</b></div>
+                  <div><span className="muted">Hour DHU</span><b className="tnum" style={{ color: hourDhuShown > 7 ? 'var(--crit)' : hourDhuShown > 4 ? 'var(--warn)' : 'var(--good)' }}>{hourDhuShown.toFixed(2)}%</b></div>
                 </div>
                 <div className="field" style={{ marginTop: 12 }}>
                   <label style={{ fontSize: 12 }}>Reason <span className="muted">(optional — note if output was low this hour)</span></label>

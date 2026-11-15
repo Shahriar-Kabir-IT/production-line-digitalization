@@ -98,7 +98,7 @@ export default function PmDashboardPage() {
         <div className="card kpi" style={{ ['--kpiac' as any]: `var(--${effClass})` }}>
           <div className="label eyebrow">Avg Efficiency</div>
           <div className="value tnum" style={{ color: `var(--${effClass})` }}>{d.totals.avgEff.toFixed(2)}<small> %</small></div>
-          <div className="sub">target {d.totals.targetEff}%</div>
+          <div className="sub">target {d.totals.targetEff.toFixed(2)}%</div>
         </div>
         <div className="card kpi" style={{ ['--kpiac' as any]: d.totals.dhu > 7 ? 'var(--crit)' : d.totals.dhu > 4 ? 'var(--warn)' : 'var(--good)' }}>
           <div className="label eyebrow">D.H.U.</div>
@@ -120,13 +120,13 @@ export default function PmDashboardPage() {
             </div>
           </div>
           <div className="card pad pm-cell">
-            <h3 className="ct">Efficiency by Line</h3><div className="cap">Avg efficiency vs. {d.totals.targetEff}% target</div>
+            <h3 className="ct">Efficiency by Line</h3><div className="cap">Avg efficiency vs. {d.totals.targetEff.toFixed(2)}% target</div>
             <div className="chart-h grow">
               <EfficiencyBars labels={labels} efficiency={d.lines.map((l) => l.avgEff)} targetEff={d.totals.targetEff} />
             </div>
           </div>
           <div className="card pad pm-cell">
-            <h3 className="ct">Defect Breakdown</h3><div className="cap">Across my lines · {fmt(d.totals.defects)} defects · DHU {d.totals.dhu}%</div>
+            <h3 className="ct">Defect Breakdown</h3><div className="cap">Across my lines · {fmt(d.totals.defects)} defects · DHU {d.totals.dhu.toFixed(2)}%</div>
             <div className="chart-h grow">
               {pareto.length > 0 ? <DefectDoughnut labels={pareto.map((c) => c.name)} counts={pareto.map((c) => c.count)} /> : <div className="fullcenter">No defects recorded</div>}
             </div>
