@@ -24,6 +24,7 @@ export default function WorkStudyPage() {
   const [manpower, setManpower] = useState(55);
   const [dayTarget, setDayTarget] = useState(1700);
   const [workingHours, setWorkingHours] = useState<string>(String(PLANNED_HOURS));
+  const [copying, setCopying] = useState(false);
   // numeric working hours used for calculations & saving (free-typed string → clamped 1..MAX)
   const whNum = (() => { const n = Math.floor(Number(workingHours)); return n >= 1 ? Math.min(n, MAX_HOURS) : PLANNED_HOURS; })();
 
@@ -79,7 +80,6 @@ export default function WorkStudyPage() {
     }
   }
 
-  const [copying, setCopying] = useState(false);
   // Prefill this form from the most recent earlier plan for this line (daily data is similar).
   async function copyPreviousDay() {
     if (!lineId) return;
