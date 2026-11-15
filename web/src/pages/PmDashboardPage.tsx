@@ -97,12 +97,12 @@ export default function PmDashboardPage() {
         </div>
         <div className="card kpi" style={{ ['--kpiac' as any]: `var(--${effClass})` }}>
           <div className="label eyebrow">Avg Efficiency</div>
-          <div className="value tnum" style={{ color: `var(--${effClass})` }}>{d.totals.avgEff.toFixed(1)}<small> %</small></div>
+          <div className="value tnum" style={{ color: `var(--${effClass})` }}>{d.totals.avgEff.toFixed(2)}<small> %</small></div>
           <div className="sub">target {d.totals.targetEff}%</div>
         </div>
         <div className="card kpi" style={{ ['--kpiac' as any]: d.totals.dhu > 7 ? 'var(--crit)' : d.totals.dhu > 4 ? 'var(--warn)' : 'var(--good)' }}>
           <div className="label eyebrow">D.H.U.</div>
-          <div className="value tnum">{d.totals.dhu.toFixed(1)}<small> %</small></div><div className="sub">{fmt(d.totals.defects)} defects</div>
+          <div className="value tnum">{d.totals.dhu.toFixed(2)}<small> %</small></div><div className="sub">{fmt(d.totals.defects)} defects</div>
         </div>
       </div>
 
@@ -143,8 +143,8 @@ export default function PmDashboardPage() {
                       <td className="muted">{r.buyer}</td>
                       <td className="num">{fmt(r.dayTarget)}</td>
                       <td className="num">{fmt(r.achieved)}</td>
-                      <td className="num" style={{ color: `var(--${r.status})`, fontWeight: 600 }}>{r.avgEff.toFixed(1)}</td>
-                      <td className="num">{r.dhu.toFixed(1)}</td>
+                      <td className="num" style={{ color: `var(--${r.status})`, fontWeight: 600 }}>{r.avgEff.toFixed(2)}</td>
+                      <td className="num">{r.dhu.toFixed(2)}</td>
                       <td><StatusPill status={r.status} /></td>
                     </tr>
                   ))}

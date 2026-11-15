@@ -39,7 +39,7 @@ export default function Gauge({ value, targetEff, status }: { value: number; tar
       />
       <line x1={ix} y1={iy} x2={mx} y2={my} stroke="#131d2e" strokeWidth="2.5" />
       <text x={mx} y={my - 7} fill="#4e5d77" fontSize="9" textAnchor="middle" fontFamily="IBM Plex Mono">TGT {targetEff.toFixed(0)}</text>
-      <text x="100" y="92" textAnchor="middle" fontFamily="Barlow Semi Condensed" fontWeight="700" fontSize="42" fill={col}>{value.toFixed(1)}</text>
+      <text x="100" y="92" textAnchor="middle" fontFamily="Barlow Semi Condensed" fontWeight="700" fontSize="42" fill={col}>{value.toFixed(2)}</text>
       <text x="100" y="112" textAnchor="middle" fontSize="10" letterSpacing="2" fill="#8794ab">PERCENT</text>
     </svg>
   );

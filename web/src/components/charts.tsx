@@ -13,6 +13,7 @@ const baseScales = (yCallback?: (v: number) => string) => ({
 });
 
 const kfmt = (v: number) => (v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k' : String(v));
+const full = (v: number) => Math.round(v).toLocaleString(); // 1000, 1100, 1200 (no "k")
 
 // Per-bar vertical gradient from a list of base colors.
 const barGrad = (colors: string[], alphaBottom = 'c0') =>
@@ -45,9 +46,9 @@ export function TargetAchievedChart({ labels, pace, cumulative, color, suggested
     responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: { display: true, position: 'top', align: 'end', labels: { color: C.ink2, usePointStyle: true, pointStyle: 'line', boxWidth: 22, font: { size: 12 } } },
-      tooltip: tooltipStyle,
+      tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y == null ? '—' : Number(c.parsed.y).toLocaleString()} pcs` } },
     },
-    scales: { ...baseScales(kfmt), y: { ...baseScales(kfmt).y, suggestedMax } },
+    scales: { ...baseScales(full), y: { ...baseScales(full).y, suggestedMax } },
   };
   return <Line data={data} options={options} />;
 }
@@ -61,7 +62,7 @@ export function EfficiencyBars({ labels, efficiency, targetEff }: { labels: stri
   };
   const options: ChartOptions<'bar'> = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${Number(c.parsed.y).toFixed(1)}% efficiency` } } },
+    plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${Number(c.parsed.y).toFixed(2)}% efficiency` } } },
     scales: { ...baseScales((v) => v + '%'), y: { ...baseScales().y, suggestedMax: 100, ticks: { color: C.ink3, font, padding: 8, stepSize: 25, callback: (v: number | string) => v + '%' } } },
   };
   return <Bar data={data} options={options} plugins={[targetLinePlugin(targetEff)]} />;
@@ -101,8 +102,24 @@ export function DefectDoughnut({ labels, counts, maxSlices = 9 }: { labels: stri
   const options: ChartOptions<'doughnut'> = {
     responsive: true, maintainAspectRatio: false, cutout: '64%', layout: { padding: 6 },
     plugins: {
-      legend: { position: 'right', labels: { color: C.ink2, usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 9, font: { size: 11.5 } } },
-      tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${c.label}: ${c.parsed} (${total ? ((Number(c.parsed) / total) * 100).toFixed(1) : 0}%)` } },
+      legend: {
+        position: 'right',
+        labels: {
+          color: C.ink2, usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 9, font: { size: 11.5 },
+          // show the count next to every defect name, so the numbers are always visible
+          generateLabels: (chart) => {
+            const ds = chart.data.datasets[0];
+            return (chart.data.labels as string[]).map((lab, i) => ({
+              text: `${lab} — ${(ds.data[i] as number)}`,
+              fillStyle: (ds.backgroundColor as string[])[i],
+              strokeStyle: (ds.backgroundColor as string[])[i],
+              pointStyle: 'circle',
+              index: i,
+            }));
+          },
+        },
+      },
+      tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${c.label}: ${c.parsed} (${total ? ((Number(c.parsed) / total) * 100).toFixed(2) : 0}%)` } },
     },
   };
   return <Doughnut data={data} options={options} plugins={[doughnutCenter(total)]} />;
@@ -130,7 +147,7 @@ export function FactoryEffBars({ labels, eff, colors, targetEff }: { labels: str
   };
   const options: ChartOptions<'bar'> = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${Number(c.parsed.y).toFixed(1)}% avg efficiency` } } },
+    plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${Number(c.parsed.y).toFixed(2)}% avg efficiency` } } },
     scales: { ...baseScales((v) => v + '%'), y: { ...baseScales().y, suggestedMax: 100, ticks: { color: C.ink3, font, padding: 8, stepSize: 25, callback: (v: number | string) => v + '%' } } },
   };
   return <Bar data={data} options={options} plugins={[targetLinePlugin(targetEff)]} />;

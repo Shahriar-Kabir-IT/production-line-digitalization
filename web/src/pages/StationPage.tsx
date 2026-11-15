@@ -77,6 +77,28 @@ export default function StationPage() {
     } catch { setCustomCodes([]); }
   }, [factoryDate]);
 
+  // Per-hour reason note (for the open hour).
+  const [reasonText, setReasonText] = useState('');
+  const [reasonSaving, setReasonSaving] = useState(false);
+  useEffect(() => {
+    const st = station.data;
+    const oi = st?.openHourIndex ?? -1;
+    setReasonText(oi >= 0 ? (st?.hours[oi]?.reason ?? '') : '');
+  }, [station.data]);
+  async function saveReason() {
+    const st = station.data;
+    if (!st || st.openHourIndex < 0) return;
+    const val = reasonText.trim();
+    if (val === (st.hours[st.openHourIndex]?.reason ?? '')) return;
+    setReasonSaving(true);
+    try {
+      const resp = await client.post<Station>(`/public/station/${lineId}/reason`, { date: st.date, hourIndex: st.openHourIndex, reason: val });
+      qc.setQueryData(['station', lineId], resp.data);
+      toast('Reason saved');
+    } catch (e: any) { toast(e?.response?.data?.error || 'Could not save reason', 'err'); }
+    finally { setReasonSaving(false); }
+  }
+
   // ---- local accumulation + debounced single-flight flush (instant, glitch-free) ----
   // pendingRef is the synchronous source of truth; `force` re-renders when it changes.
   const pendingRef = useRef<Record<string, number>>({});
@@ -209,7 +231,7 @@ export default function StationPage() {
   const customSet = new Set(customCodes.map((c) => c.code));
   const totalKeys = new Set<string>([...mergedCodes.map((c) => c.code), ...(openHour ? Object.keys(openHour.defects) : [])]);
   const totalDefShown = openHour ? [...totalKeys].reduce((sum, code) => sum + defectShown(code), 0) : 0;
-  const hourDhuShown = checkedShown > 0 ? +((totalDefShown * 100) / checkedShown).toFixed(1) : 0;
+  const hourDhuShown = checkedShown > 0 ? +((totalDefShown * 100) / checkedShown).toFixed(2) : 0;
 
   return (
     <div className="page">
@@ -239,8 +261,8 @@ export default function StationPage() {
 
           <div className="hourstrip">
             {s.hours.map((h) => (
-              <div key={h.hourIndex} className={`hchip ${h.state}`} title={`${h.hourLabel} · ${h.state}`}>
-                <div className="hl"><span className="dot" style={{ background: stateDot[h.state] }} />{h.hourLabel}</div>
+              <div key={h.hourIndex} className={`hchip ${h.state}`} title={`${h.hourLabel} · ${h.state}${h.reason ? ' · Reason: ' + h.reason : ''}`}>
+                <div className="hl"><span className="dot" style={{ background: stateDot[h.state] }} />{h.hourLabel}{h.reason ? <span title={h.reason} style={{ marginLeft: 3 }}>📝</span> : null}</div>
                 <div className="hv tnum">{h.hourIndex === openIdx ? checkedShown : h.checkedQty}</div>
                 <div className="hd">{h.state === 'open' ? 'LIVE' : h.totalDefects ? `${h.totalDefects} def` : h.state === 'locked' ? 'locked' : '—'}</div>
               </div>
@@ -272,6 +294,12 @@ export default function StationPage() {
                 <div className="counter-foot">
                   <div><span className="muted">Defects</span><b className="tnum">{totalDefShown}</b></div>
                   <div><span className="muted">Hour DHU</span><b className="tnum" style={{ color: hourDhuShown > 7 ? 'var(--crit)' : hourDhuShown > 4 ? 'var(--warn)' : 'var(--good)' }}>{hourDhuShown}%</b></div>
+                </div>
+                <div className="field" style={{ marginTop: 12 }}>
+                  <label style={{ fontSize: 12 }}>Reason <span className="muted">(optional — note if output was low this hour)</span></label>
+                  <input className="input" value={reasonText} maxLength={200} placeholder="e.g. machine breakdown, power cut, style change…"
+                    onChange={(e) => setReasonText(e.target.value)} onBlur={saveReason}
+                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} disabled={reasonSaving} />
                 </div>
               </div>
 

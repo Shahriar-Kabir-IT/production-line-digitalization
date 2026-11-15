@@ -94,8 +94,8 @@ export function computeLineMetrics(plan: PlanInput, entries: EntryInput[], hourL
       run += e.checkedQty;
       output.push(e.checkedQty);
       cumulative.push(run);
-      efficiency.push(+hourlyEfficiency(e.checkedQty, plan.smv, plan.manpower).toFixed(1));
-      dhuSeries.push(e.checkedQty > 0 ? +((e.defectCount * 100) / e.checkedQty).toFixed(1) : 0);
+      efficiency.push(+hourlyEfficiency(e.checkedQty, plan.smv, plan.manpower).toFixed(2));
+      dhuSeries.push(e.checkedQty > 0 ? +((e.defectCount * 100) / e.checkedQty).toFixed(2) : 0);
     } else {
       output.push(null); cumulative.push(null); efficiency.push(null); dhuSeries.push(null);
     }
@@ -107,12 +107,12 @@ export function computeLineMetrics(plan: PlanInput, entries: EntryInput[], hourL
     paceTarget: Math.round(paceTarget),
     pctOfDay: plan.dayTarget ? (achieved / plan.dayTarget) * 100 : 0,
     pctOfPace: paceTarget ? (achieved / paceTarget) * 100 : 0,
-    avgEff: +avgEff.toFixed(1),
-    targetEff: +targetEff.toFixed(1),
+    avgEff: +avgEff.toFixed(2),
+    targetEff: +targetEff.toFixed(2),
     totalDefects,
     totalChecked,
-    dhu: +dhu.toFixed(1),
-    bestHourEff: effByHour.length ? +Math.max(...effByHour).toFixed(1) : 0,
+    dhu: +dhu.toFixed(2),
+    bestHourEff: effByHour.length ? +Math.max(...effByHour).toFixed(2) : 0,
     status: statusFromEfficiency(avgEff, targetEff),
     series: { labels: hourLabels, output, cumulative, pace, efficiency, dhu: dhuSeries },
   };

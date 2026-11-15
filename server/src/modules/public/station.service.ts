@@ -43,7 +43,8 @@ export async function getStation(lineId: string, dateInput?: string) {
     if (state === 'open') openHourIndex = i;
     return {
       hourIndex: i, hourLabel: label, checkedQty, defects, totalDefects,
-      dhu: checkedQty > 0 ? +((totalDefects * 100) / checkedQty).toFixed(1) : 0,
+      dhu: checkedQty > 0 ? +((totalDefects * 100) / checkedQty).toFixed(2) : 0,
+      reason: e?.reason ?? null,
       state,
     };
   });
@@ -108,5 +109,17 @@ export async function adjustDefect(lineId: string, dateStr: string, hourIndex: n
   await prisma.$executeRaw`
     UPDATE "HourlyDefect" SET "count" = GREATEST(0, "count" + ${delta})
     WHERE "entryId" = ${entry.id} AND "code" = ${code}`;
+  return emitAndReturn(lineId, dateStr);
+}
+
+/** Set (or clear) the reason note for an hour — allowed for any hour that has started. */
+export async function setReason(lineId: string, dateStr: string, hourIndex: number, reason: string) {
+  const date = normalizeDate(dateStr);
+  const plan = await prisma.workStudyPlan.findUnique({ where: { lineId_date: { lineId, date } } });
+  if (!plan) throw new AppError(409, 'No Work Study plan exists for this line today');
+  if (hourIndex < 0 || hourIndex >= plan.plannedHours) throw new AppError(400, 'Invalid hour');
+  if (hourState(dateStr, hourIndex) === 'upcoming') throw new AppError(423, 'That hour has not started yet');
+  const entry = await ensureEntry(plan.id, hourIndex);
+  await prisma.hourlyEntry.update({ where: { id: entry.id }, data: { reason: reason.trim() || null } });
   return emitAndReturn(lineId, dateStr);
 }

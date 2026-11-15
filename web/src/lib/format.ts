@@ -1,7 +1,7 @@
 import type { Status } from '../api/types';
 
 export const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
-export const pct = (n: number | null | undefined) => `${(n ?? 0).toFixed(1)}%`;
+export const pct = (n: number | null | undefined) => `${(n ?? 0).toFixed(2)}%`;
 
 export const statusLabel: Record<Status, string> = { good: 'On Target', warn: 'Watch', crit: 'Behind' };
 

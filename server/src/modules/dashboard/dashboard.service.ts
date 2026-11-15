@@ -62,8 +62,8 @@ export function serializeLineRow(plan: PlanFull) {
     targetEff: m.targetEff,
     dhu: m.dhu,
     totalDefects: m.totalDefects,
-    pctOfDay: +m.pctOfDay.toFixed(1),
-    pctOfPace: +m.pctOfPace.toFixed(1),
+    pctOfDay: +m.pctOfDay.toFixed(2),
+    pctOfPace: +m.pctOfPace.toFixed(2),
     workedHours: m.workedHours,
     status: m.status,
   };
@@ -87,7 +87,8 @@ async function plansForScope(user: AuthUser, date: Date, factoryId?: string) {
 export async function getLineRows(user: AuthUser, date: Date, factoryId?: string) {
   const plans = await plansForScope(user, date, factoryId);
   // Keep the canonical factory order (AGL, ASL, AJL, ABM); line order preserved within a factory.
-  return plans.map(serializeLineRow).sort((a, b) => factoryRank(a.factory) - factoryRank(b.factory));
+  return plans.map(serializeLineRow)
+    .sort((a, b) => factoryRank(a.factory) - factoryRank(b.factory) || a.line.localeCompare(b.line, undefined, { numeric: true }));
 }
 
 export async function getOverview(user: AuthUser, date: Date) {
@@ -109,8 +110,8 @@ export async function getOverview(user: AuthUser, date: Date) {
     return {
       factoryId: f.id, code: f.code, name: f.name, lineCount: f._count.lines, reporting: fr.length,
       target, achieved, projected,
-      avgEff: +avgEff.toFixed(1), targetEff: +targetEff.toFixed(1), dhu: +dhu.toFixed(1),
-      pct: target ? +((achieved / target) * 100).toFixed(1) : 0,
+      avgEff: +avgEff.toFixed(2), targetEff: +targetEff.toFixed(2), dhu: +dhu.toFixed(2),
+      pct: target ? +((achieved / target) * 100).toFixed(2) : 0,
     };
   });
 
@@ -124,8 +125,8 @@ export async function getOverview(user: AuthUser, date: Date) {
     achieved: achievedTotal,
     projected: byFactory.reduce((s, f) => s + f.projected, 0),
     defects: rows.reduce((s, r) => s + r.totalDefects, 0),
-    avgEff: reportingTotal ? +(byFactory.reduce((s, f) => s + f.avgEff * f.reporting, 0) / reportingTotal).toFixed(1) : 0,
-    dhu: achievedTotal > 0 ? +((rows.reduce((s, r) => s + r.totalDefects, 0) * 100) / achievedTotal).toFixed(1) : 0,
+    avgEff: reportingTotal ? +(byFactory.reduce((s, f) => s + f.avgEff * f.reporting, 0) / reportingTotal).toFixed(2) : 0,
+    dhu: achievedTotal > 0 ? +((rows.reduce((s, r) => s + r.totalDefects, 0) * 100) / achievedTotal).toFixed(2) : 0,
   };
 
   return { date: date.toISOString().slice(0, 10), factories: byFactory, totals };
@@ -150,7 +151,7 @@ export async function getDefectAnalytics(user: AuthUser, date: Date, factoryId?:
     });
     return {
       lineId: p.lineId, line: p.line.name, factory: p.line.factory.code,
-      checked, defects, dhu: checked > 0 ? +((defects * 100) / checked).toFixed(1) : 0,
+      checked, defects, dhu: checked > 0 ? +((defects * 100) / checked).toFixed(2) : 0,
     };
   });
 
@@ -163,7 +164,7 @@ export async function getDefectAnalytics(user: AuthUser, date: Date, factoryId?:
 
   return {
     date: date.toISOString().slice(0, 10),
-    totals: { defects: totalDefects, checked: totalChecked, dhu: totalChecked > 0 ? +((totalDefects * 100) / totalChecked).toFixed(1) : 0 },
+    totals: { defects: totalDefects, checked: totalChecked, dhu: totalChecked > 0 ? +((totalDefects * 100) / totalChecked).toFixed(2) : 0 },
     byCode,
     byLine: byLine.filter((l) => l.defects > 0).sort((a, b) => b.dhu - a.dhu),
   };
@@ -198,9 +199,10 @@ export async function getLineReport(user: AuthUser, lineId: string, date: Date) 
     return {
       hourLabel: label,
       checked,
-      efficiency: checked > 0 ? +hourlyEfficiency(checked, plan.smv, plan.manpower).toFixed(1) : 0,
+      efficiency: checked > 0 ? +hourlyEfficiency(checked, plan.smv, plan.manpower).toFixed(2) : 0,
       totalDefects: total,
-      dhu: checked > 0 ? +((total * 100) / checked).toFixed(1) : 0,
+      dhu: checked > 0 ? +((total * 100) / checked).toFixed(2) : 0,
+      reason: e?.reason ?? null,
       defects,
     };
   });
@@ -243,7 +245,7 @@ export async function getPmDashboard(pm: { id: string; name: string; factoryId: 
     ...planInclude,
     orderBy: [{ line: { name: 'asc' } }],
   });
-  const rows = plans.map(serializeLineRow);
+  const rows = plans.map(serializeLineRow).sort((a, b) => a.line.localeCompare(b.line, undefined, { numeric: true }));
 
   const target = rows.reduce((s, r) => s + r.dayTarget, 0);
   const achieved = rows.reduce((s, r) => s + r.achieved, 0);
@@ -264,8 +266,8 @@ export async function getPmDashboard(pm: { id: string; name: string; factoryId: 
     pm: { name: pm.name, factory: factory?.code ?? null, factoryName: factory?.name ?? null, lineCount, reporting: rows.length },
     totals: {
       target, achieved, projected, defects,
-      avgEff: +avgEff.toFixed(1), targetEff: +targetEff.toFixed(1),
-      dhu: achieved > 0 ? +((defects * 100) / achieved).toFixed(1) : 0,
+      avgEff: +avgEff.toFixed(2), targetEff: +targetEff.toFixed(2),
+      dhu: achieved > 0 ? +((defects * 100) / achieved).toFixed(2) : 0,
     },
     lines: rows,
     byCode,

@@ -49,7 +49,7 @@ function patchHour(st: Station, hourIndex: number, fn: (h: Station['hours'][numb
     const nh = { ...h, defects: { ...h.defects } };
     fn(nh);
     nh.totalDefects = Object.values(nh.defects).reduce((s, n) => s + n, 0);
-    nh.dhu = nh.checkedQty > 0 ? +((nh.totalDefects * 100) / nh.checkedQty).toFixed(1) : 0;
+    nh.dhu = nh.checkedQty > 0 ? +((nh.totalDefects * 100) / nh.checkedQty).toFixed(2) : 0;
     return nh;
   });
   return { ...st, hours };

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFactories, usePlan, useSavePlan } from '../api/hooks';
+import client from '../api/client';
+import type { PlanRecord } from '../api/types';
 import { fmt, todayStr } from '../lib/format';
 import { Loading, useToast } from '../components/ui';
 
 const BUYERS = ['H&M', 'KMART', 'LC Waikiki', 'S&G', 'ZXY', 'GTGS', 'Zara', 'Primark', 'C&A', 'Lindex', 'Next', 'Decathlon'];
-const PLANNED_HOURS = 11;
-const MAX_HOURS = 14;
+const PLANNED_HOURS = 10;
+const MAX_HOURS = 13;
 
 export default function WorkStudyPage() {
   const toast = useToast();
@@ -77,6 +79,30 @@ export default function WorkStudyPage() {
     }
   }
 
+  const [copying, setCopying] = useState(false);
+  // Prefill this form from the most recent earlier plan for this line (daily data is similar).
+  async function copyPreviousDay() {
+    if (!lineId) return;
+    setCopying(true);
+    try {
+      const d = new Date(date + 'T00:00:00Z');
+      let found: PlanRecord | null = null;
+      for (let back = 1; back <= 14 && !found; back++) {
+        const prev = new Date(d); prev.setUTCDate(prev.getUTCDate() - back);
+        const ds = prev.toISOString().slice(0, 10);
+        const r = await client.get<{ plan: PlanRecord | null }>('/workstudy', { params: { lineId, date: ds } });
+        if (r.data.plan) found = r.data.plan;
+      }
+      if (!found) { toast('No earlier plan found for this line', 'err'); return; }
+      setBuyerName(found.buyerName); setStyle(found.style);
+      setSmv(found.smv); setManpower(found.manpower); setDayTarget(found.dayTarget);
+      setWorkingHours(String(found.plannedHours ?? PLANNED_HOURS));
+      toast(`Copied from ${found.date} — review and Save`);
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Could not copy', 'err');
+    } finally { setCopying(false); }
+  }
+
   const effClass = derived.targetEff >= 72 ? 'good' : derived.targetEff >= 60 ? 'warn' : 'crit';
 
   return (
@@ -135,6 +161,10 @@ export default function WorkStudyPage() {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 13l4 4L19 7" /></svg>
               {save.isPending ? 'Saving…' : plan.data ? 'Update plan' : 'Save plan'}
             </button>
+            <button className="btn ghost" onClick={copyPreviousDay} disabled={copying || !lineId} title="Prefill this form from this line's most recent earlier plan">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 012-2h8" /></svg>
+              {copying ? 'Copying…' : 'Copy previous day'}
+            </button>
             {plan.data && <span className="pill good" style={{ alignSelf: 'center' }}><i />Plan exists for this date</span>}
           </div>
         </div>
@@ -144,7 +174,7 @@ export default function WorkStudyPage() {
           <div className="cap">Auto-calculated from the figures on the left</div>
           <div className="efflegend">
             <div className="row"><span className="k">Hourly target</span><span className="v">{fmt(derived.hourlyTarget)} pcs</span></div>
-            <div className="row"><span className="k">Target efficiency</span><span className="v" style={{ color: `var(--${effClass})` }}>{derived.targetEff.toFixed(1)}%</span></div>
+            <div className="row"><span className="k">Target efficiency</span><span className="v" style={{ color: `var(--${effClass})` }}>{derived.targetEff.toFixed(2)}%</span></div>
             <div className="row"><span className="k">Std. minutes / day</span><span className="v">{fmt(Math.round(derived.std))} min</span></div>
             <div className="row"><span className="k">Available minutes / day</span><span className="v">{fmt(derived.available)} min</span></div>
             <div className="row"><span className="k">Planned hours</span><span className="v">{whNum}</span></div>

@@ -4,7 +4,7 @@ import { prisma } from '../../lib/prisma';
 import { asyncHandler, AppError } from '../../utils/http';
 import { normalizeDate, getLineBoard, listPms, getPmDashboard } from '../dashboard/dashboard.service';
 import { Role } from '@prisma/client';
-import { getStation, adjustCheck, adjustDefect } from './station.service';
+import { getStation, adjustCheck, adjustDefect, setReason } from './station.service';
 import { getOrRegisterDevice, lockDevice, lockDeviceToPm } from '../sysadmin/device.service';
 import { clientIp } from '../../lib/ip';
 import { factoryRank } from '../../lib/constants';
@@ -98,6 +98,15 @@ publicRouter.post(
   asyncHandler(async (req, res) => {
     const b = defectSchema.parse(req.body);
     res.json(await adjustDefect(req.params.lineId, b.date, b.hourIndex, b.code, b.delta));
+  }),
+);
+
+const reasonSchema = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), hourIndex: z.number().int().min(0), reason: z.string().max(200) });
+publicRouter.post(
+  '/station/:lineId/reason',
+  asyncHandler(async (req, res) => {
+    const b = reasonSchema.parse(req.body);
+    res.json(await setReason(req.params.lineId, b.date, b.hourIndex, b.reason));
   }),
 );
 

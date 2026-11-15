@@ -135,6 +135,7 @@ model HourlyEntry {
   hourIndex  Int // 0-based slot within plannedHours
   hourLabel  String // "8–9", "9–10" ...
   checkedQty Int           @default(0)
+  reason     String? // optional note when output is low for the hour
   defects    HourlyDefect[]
   updatedAt  DateTime      @updatedAt
   createdAt  DateTime      @default(now())

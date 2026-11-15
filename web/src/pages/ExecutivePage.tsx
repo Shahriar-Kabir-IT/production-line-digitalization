@@ -71,7 +71,7 @@ function FactorySlide({ f }: { f: FactoryOverview }) {
         <div style={{ fontSize: 14.5, color: 'var(--ink-2)', marginBottom: 22, marginLeft: 54 }}>{f.reporting} of {f.lineCount} lines reporting today</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
           <Stat label="Achieved" value={fmt(f.achieved)} delta={`Projected ${fmt(f.projected)} by day end`} />
-          <Stat label="Avg Efficiency" value={pct(f.avgEff)} accent={STATUS[es]} delta={`${effDelta >= 0 ? '+' : ''}${effDelta.toFixed(1)} vs ${pct(f.targetEff)} target`} />
+          <Stat label="Avg Efficiency" value={pct(f.avgEff)} accent={STATUS[es]} delta={`${effDelta >= 0 ? '+' : ''}${effDelta.toFixed(2)} vs ${pct(f.targetEff)} target`} />
           <Stat label="Day Target" value={fmt(f.target)} delta={`${pct(f.pct)} achieved so far`} />
           <Stat label="DHU (Quality)" value={pct(f.dhu)} accent={dhuColor(f.dhu)} delta="Defects per hundred units" />
         </div>

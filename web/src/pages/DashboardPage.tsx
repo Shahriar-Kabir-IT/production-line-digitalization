@@ -60,12 +60,12 @@ export default function DashboardPage() {
         <div className="card kpi">
           <div className="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 14a6 6 0 10-6-6" /><path d="M12 14l4-4" /><path d="M4 20a8 8 0 0116 0" /></svg></div>
           <div className="label eyebrow">Avg Efficiency</div>
-          <div className="value tnum">{o.totals.avgEff.toFixed(1)}<small> %</small></div><div className="sub">target {avgTargetEff.toFixed(0)}%</div>
+          <div className="value tnum">{o.totals.avgEff.toFixed(2)}<small> %</small></div><div className="sub">target {avgTargetEff.toFixed(0)}%</div>
         </div>
         <div className="card kpi">
           <div className="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.3 3.9l-8 14A2 2 0 004 21h16a2 2 0 001.7-3.1l-8-14a2 2 0 00-3.4 0z" /><path d="M12 9v4M12 17h.01" /></svg></div>
           <div className="label eyebrow">D.H.U.</div>
-          <div className="value tnum">{o.totals.dhu.toFixed(1)}<small> %</small></div><div className="sub">{fmt(o.totals.defects)} defects total</div>
+          <div className="value tnum">{o.totals.dhu.toFixed(2)}<small> %</small></div><div className="sub">{fmt(o.totals.defects)} defects total</div>
         </div>
       </div>
 
@@ -79,7 +79,7 @@ export default function DashboardPage() {
             </div>
             <div className="big tnum">{fmt(f.achieved)} <small>/ {fmt(f.target)}</small></div>
             <div className="barbg"><div className="barfl" style={{ width: `${Math.min(100, f.pct)}%`, background: facVar(f.code) }} /></div>
-            <div className="foot"><span>{f.lineCount} lines</span><span>Eff <b>{f.avgEff.toFixed(1)}%</b></span><span>DHU <b>{f.dhu.toFixed(1)}%</b></span><span>Proj <b>{fmt(f.projected)}</b></span></div>
+            <div className="foot"><span>{f.lineCount} lines</span><span>Eff <b>{f.avgEff.toFixed(2)}%</b></span><span>DHU <b>{f.dhu.toFixed(2)}%</b></span><span>Proj <b>{fmt(f.projected)}</b></span></div>
           </div>
         ))}
       </div>

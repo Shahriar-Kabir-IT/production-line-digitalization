@@ -54,7 +54,7 @@ export interface Board {
 
 export interface StationHour {
   hourIndex: number; hourLabel: string; checkedQty: number;
-  defects: Record<string, number>; totalDefects: number; dhu: number; state: HourState;
+  defects: Record<string, number>; totalDefects: number; dhu: number; reason?: string | null; state: HourState;
 }
 export interface Station {
   lineId: string; line: string; factoryId: string; factory: string; factoryName: string;

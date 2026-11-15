@@ -14,8 +14,8 @@ export default function LinesPage() {
   const [date, setDate] = useState(todayStr());
   const [factory, setFactory] = useState('ALL');
   const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('avgEff');
-  const [sortDir, setSortDir] = useState(-1);
+  const [sortKey, setSortKey] = useState<SortKey>('line');
+  const [sortDir, setSortDir] = useState(1);
   const [downloading, setDownloading] = useState<string | null>(null);
 
   const rows = useLineRows(date);
@@ -36,15 +36,19 @@ export default function LinesPage() {
           .some((v) => String(v).toLowerCase().includes(q)),
       );
     }
+    const FSEQ = ['AGL', 'ASL', 'AJL', 'ABM'];
+    const frank = (c: string) => { const i = FSEQ.indexOf(c); return i < 0 ? 99 : i; };
     data.sort((a, b) => {
+      // Serial line order: factory (canonical) then natural line number/letter.
+      if (sortKey === 'line') return (frank(a.factory) - frank(b.factory) || a.line.localeCompare(b.line, undefined, { numeric: true })) * sortDir;
       const x = a[sortKey], y = b[sortKey];
-      if (typeof x === 'string' && typeof y === 'string') return x.localeCompare(y) * sortDir;
+      if (typeof x === 'string' && typeof y === 'string') return x.localeCompare(y, undefined, { numeric: true }) * sortDir;
       return ((x as number) - (y as number)) * sortDir;
     });
     return data;
   }, [rows.data, factory, search, sortKey, sortDir]);
 
-  function toggleSort(k: SortKey) { if (sortKey === k) setSortDir((d) => -d); else { setSortKey(k); setSortDir(-1); } }
+  function toggleSort(k: SortKey) { if (sortKey === k) setSortDir((d) => -d); else { setSortKey(k); setSortDir(k === 'line' ? 1 : -1); } }
   const arrow = (k: SortKey) => (sortKey === k ? (sortDir < 0 ? ' ▼' : ' ▲') : '');
 
   async function onDownload(lineId: string, label: string) {
@@ -117,8 +121,8 @@ export default function LinesPage() {
                   <td className="num">{r.smv}</td><td className="num">{r.manpower}</td><td className="num">{fmt(r.dayTarget)}</td>
                   <td className="num">{fmt(r.achieved)} <span className="mini" style={{ marginLeft: 6 }}><i style={{ width: `${Math.min(100, (r.achieved / r.dayTarget) * 100)}%`, background: facVar(r.factory) }} /></span></td>
                   <td className="num" style={{ color: r.pctOfPace >= 100 ? 'var(--good)' : r.pctOfPace >= 85 ? 'var(--warn)' : 'var(--crit)' }}>{r.pctOfPace.toFixed(0)}%</td>
-                  <td className="num" style={{ color: `var(--${r.status})`, fontWeight: 600 }}>{r.avgEff.toFixed(1)}</td>
-                  <td className="num">{r.dhu.toFixed(1)}</td>
+                  <td className="num" style={{ color: `var(--${r.status})`, fontWeight: 600 }}>{r.avgEff.toFixed(2)}</td>
+                  <td className="num">{r.dhu.toFixed(2)}</td>
                   <td><StatusPill status={r.status} /></td>
                   <td>
                     <button className="dl-btn" title={`Download report — ${r.factory} · Line ${r.line}`} disabled={downloading === r.lineId} onClick={() => onDownload(r.lineId, `${r.factory} · Line ${r.line}`)}>

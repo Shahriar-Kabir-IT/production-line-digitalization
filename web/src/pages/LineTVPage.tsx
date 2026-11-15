@@ -78,12 +78,12 @@ export default function LineTVPage() {
             </div>
             <div className="card kpi" style={{ ['--kpiac' as any]: `var(--${m.status})` }}>
               <div className="label eyebrow">Avg Efficiency</div>
-              <div className="value tnum" style={{ color: `var(--${m.status})` }}>{m.avgEff.toFixed(1)}<small> %</small></div>
+              <div className="value tnum" style={{ color: `var(--${m.status})` }}>{m.avgEff.toFixed(2)}<small> %</small></div>
               <div className="sub">target {m.targetEff}%</div>
             </div>
             <div className="card kpi" style={{ ['--kpiac' as any]: m.dhu > 7 ? 'var(--crit)' : m.dhu > 4 ? 'var(--warn)' : 'var(--good)' }}>
               <div className="label eyebrow">D.H.U.</div>
-              <div className="value tnum">{m.dhu.toFixed(1)}<small> %</small></div>
+              <div className="value tnum">{m.dhu.toFixed(2)}<small> %</small></div>
               <div className="sub">{fmt(m.totalDefects)} defects / {fmt(m.totalChecked)} checked</div>
             </div>
           </div>
@@ -102,8 +102,8 @@ export default function LineTVPage() {
             <div className="gaugewrap">
               <div className="gauge"><Gauge value={m.avgEff} targetEff={m.targetEff} status={m.status} /></div>
               <div className="efflegend">
-                <div className="row"><span className="k">Current avg</span><span className="v" style={{ color: `var(--${m.status})` }}>{m.avgEff.toFixed(1)}%</span></div>
-                <div className="row"><span className="k">Best hour</span><span className="v">{m.bestHourEff.toFixed(1)}%</span></div>
+                <div className="row"><span className="k">Current avg</span><span className="v" style={{ color: `var(--${m.status})` }}>{m.avgEff.toFixed(2)}%</span></div>
+                <div className="row"><span className="k">Best hour</span><span className="v">{m.bestHourEff.toFixed(2)}%</span></div>
                 <div className="row"><span className="k">Pace vs plan</span><span className="v">{m.pctOfPace.toFixed(0)}%</span></div>
               </div>
             </div>

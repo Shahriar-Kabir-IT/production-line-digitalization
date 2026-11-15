@@ -17,7 +17,7 @@ const planSchema = z.object({
   smv: z.number().positive(),
   manpower: z.number().int().positive(),
   dayTarget: z.number().int().positive(),
-  plannedHours: z.number().int().min(1).max(14).optional(),
+  plannedHours: z.number().int().min(1).max(13).optional(),
 });
 
 // Read the plan for a line/date (null if none yet).
@@ -61,7 +61,7 @@ workstudyRouter.post(
       smv: body.smv,
       manpower: body.manpower,
       dayTarget: body.dayTarget,
-      plannedHours: body.plannedHours ?? 11,
+      plannedHours: body.plannedHours ?? 10,
       authorId: req.user!.id,
     };
 
