@@ -1,6 +1,6 @@
 import { Prisma, Role } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
-import { HOUR_LABELS, factoryRank } from '../../lib/constants';
+import { HOUR_LABELS, factoryRank, lineAllocRank } from '../../lib/constants';
 import { computeLineMetrics, EntryInput, hourlyEfficiency } from '../../utils/metrics';
 import { AuthUser, assertFactoryScope } from '../../middleware/auth';
 import { AppError } from '../../utils/http';
@@ -245,7 +245,8 @@ export async function getPmDashboard(pm: { id: string; name: string; factoryId: 
     ...planInclude,
     orderBy: [{ line: { name: 'asc' } }],
   });
-  const rows = plans.map(serializeLineRow).sort((a, b) => a.line.localeCompare(b.line, undefined, { numeric: true }));
+  // PM-wise order follows the allocation list exactly (A, B, C, NEW-10, D …), not numeric.
+  const rows = plans.map(serializeLineRow).sort((a, b) => lineAllocRank(a.factory, a.line) - lineAllocRank(b.factory, b.line));
 
   const target = rows.reduce((s, r) => s + r.dayTarget, 0);
   const achieved = rows.reduce((s, r) => s + r.achieved, 0);

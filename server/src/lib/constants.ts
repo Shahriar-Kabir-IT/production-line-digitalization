@@ -32,6 +32,13 @@ export const PM_ALLOCATION: { factory: string; pm: string; floor: string; lines:
 ];
 export const pmUsername = (factory: string, pm: string) => `${pm.replace(/[^a-z0-9]/gi, '').toLowerCase()}.${factory.toLowerCase()}`;
 
+// Each line's position within its PM's allocation list (the exact order in PM_ALLOCATION,
+// e.g. A, B, C, NEW-10, D …) — NOT numeric/alphabetical. Used to order PM-wise line lists.
+const LINE_ALLOC: Record<string, number> = {};
+PM_ALLOCATION.forEach((a) => a.lines.forEach((l, i) => { LINE_ALLOC[`${a.factory}|${l}`] = i; }));
+export const lineAllocRank = (factory: string | null | undefined, line: string): number =>
+  LINE_ALLOC[`${factory ?? ''}|${line}`] ?? 999;
+
 // Defect-code master (from form Q-SEW006-01). A few faint codes on the scan are
 // best-effort; edit names/codes here and re-seed if the controlled list differs.
 export const DEFECT_CODES: { code: string; name: string }[] = [
