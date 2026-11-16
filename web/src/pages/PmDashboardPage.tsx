@@ -125,9 +125,9 @@ export default function PmDashboardPage() {
               <EfficiencyBars labels={labels} efficiency={d.lines.map((l) => l.avgEff)} targetEff={d.totals.targetEff} />
             </div>
           </div>
-          <div className="card pad pm-cell">
+          <div className="card pad pm-cell" style={{ gridColumn: '1 / -1' }}>
             <h3 className="ct">Defect Breakdown</h3><div className="cap">Across my lines · {fmt(d.totals.defects)} defects · DHU {d.totals.dhu.toFixed(2)}%</div>
-            <div className="chart-h grow">
+            <div className="chart-h" style={{ height: 420 }}>
               {pareto.length > 0 ? <DefectDoughnut labels={pareto.map((c) => c.name)} counts={pareto.map((c) => c.count)} /> : <div className="fullcenter">No defects recorded</div>}
             </div>
           </div>

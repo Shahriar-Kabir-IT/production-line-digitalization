@@ -128,6 +128,60 @@ export function barValueLabels(fmt: (v: number) => string) {
   };
 }
 
+/** Leader-line callout labels around a doughnut: "Name" + "N Pieces (X.XX%)". */
+export function doughnutCallouts() {
+  return {
+    id: 'callouts-' + Math.random().toString(36).slice(2),
+    afterDraw(chart: Chart) {
+      const meta = chart.getDatasetMeta(0);
+      const arcs = meta.data as unknown as { x: number; y: number; startAngle: number; endAngle: number; outerRadius: number }[];
+      if (!arcs.length) return;
+      const ds = chart.data.datasets[0];
+      const labels = chart.data.labels as string[];
+      const colors = ds.backgroundColor as string[];
+      const vals = ds.data as number[];
+      const total = vals.reduce((s, v) => s + (v || 0), 0) || 1;
+      const ctx = chart.ctx;
+      const cx = arcs[0].x, cy = arcs[0].y, r = arcs[0].outerRadius;
+      const { top, bottom } = chart.chartArea;
+
+      type Item = { i: number; cos: number; sin: number; ax: number; ay: number; side: number; y: number };
+      const items: Item[] = arcs.map((a, i) => {
+        const mid = (a.startAngle + a.endAngle) / 2;
+        const cos = Math.cos(mid), sin = Math.sin(mid);
+        return { i, cos, sin, ax: cx + cos * r, ay: cy + sin * r, side: cos >= 0 ? 1 : -1, y: cy + sin * (r + 22) };
+      });
+
+      const lineH = 34;
+      [1, -1].forEach((side) => {
+        const list = items.filter((it) => it.side === side).sort((a, b) => a.y - b.y);
+        // push apart so labels don't overlap, then clamp into the plot area
+        for (let k = 1; k < list.length; k++) if (list[k].y - list[k - 1].y < lineH) list[k].y = list[k - 1].y + lineH;
+        const overflow = list.length ? list[list.length - 1].y - (bottom - 6) : 0;
+        if (overflow > 0) list.forEach((it) => (it.y -= overflow));
+        const topOver = list.length ? (top + 6) - list[0].y : 0;
+        if (topOver > 0) list.forEach((it) => (it.y += topOver));
+
+        list.forEach((it) => {
+          const elbowX = cx + it.cos * (r + 12);
+          const elbowY = cy + it.sin * (r + 12);
+          const labelX = cx + side * (r + 56);
+          ctx.strokeStyle = colors[it.i]; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(it.ax, it.ay); ctx.lineTo(elbowX, elbowY); ctx.lineTo(labelX, it.y); ctx.stroke();
+          ctx.beginPath(); ctx.arc(labelX, it.y, 2.2, 0, Math.PI * 2); ctx.fillStyle = colors[it.i]; ctx.fill();
+          const tx = labelX + side * 7;
+          ctx.textAlign = side === 1 ? 'left' : 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = C.ink; ctx.font = "700 12px 'Barlow Semi Condensed', system-ui, sans-serif";
+          ctx.fillText(labels[it.i], tx, it.y - 7);
+          ctx.fillStyle = C.ink2; ctx.font = "600 11px 'IBM Plex Mono', monospace";
+          ctx.fillText(`${vals[it.i]} Pieces (${((vals[it.i] / total) * 100).toFixed(2)}%)`, tx, it.y + 7);
+        });
+      });
+    },
+  };
+}
+
 /** Center label for a doughnut (big total + caption). */
 export function doughnutCenter(total: number, caption = 'defects') {
   return {

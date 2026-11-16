@@ -103,14 +103,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="sec-title"><h2>Defect Analysis</h2><div className="ln" /></div>
-      <div className="grid-2col">
-        <div className="card pad">
-          <h3 className="ct">Defect Breakdown</h3>
-          <div className="cap">{defects.data ? `${fmt(defects.data.totals.defects)} defects · ${fmt(defects.data.totals.checked)} checked · DHU ${defects.data.totals.dhu.toFixed(2)}%` : '…'}</div>
-          <div className="chart-h" style={{ height: 250 }}>
-            {pareto.length > 0 && <DefectDoughnut labels={pareto.map((d) => d.name)} counts={pareto.map((d) => d.count)} />}
-          </div>
+      <div className="card pad">
+        <h3 className="ct">Defect Breakdown</h3>
+        <div className="cap">{defects.data ? `${fmt(defects.data.totals.defects)} defects · ${fmt(defects.data.totals.checked)} checked · DHU ${defects.data.totals.dhu.toFixed(2)}%` : '…'}</div>
+        <div className="chart-h" style={{ height: 400 }}>
+          {pareto.length > 0 && <DefectDoughnut labels={pareto.map((d) => d.name)} counts={pareto.map((d) => d.count)} />}
         </div>
+      </div>
+      <div style={{ marginTop: 18 }}>
         <div className="card pad">
           <h3 className="ct">Highest-DHU Lines</h3><div className="cap">Lines with the worst defect rate — act first</div>
           <div className="tablewrap" style={{ border: 0 }}>

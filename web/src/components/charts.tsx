@@ -1,6 +1,6 @@
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import type { ChartData, ChartOptions, ScriptableContext } from 'chart.js';
-import { C, font, palette, tooltipStyle, targetLinePlugin, vGradient, doughnutCenter, barValueLabels } from './chartSetup';
+import { C, font, palette, tooltipStyle, targetLinePlugin, vGradient, doughnutCenter, doughnutCallouts, barValueLabels } from './chartSetup';
 
 const pctLabel = (v: number) => v.toFixed(2) + '%';
 const numLabel = (v: number) => Math.round(v).toLocaleString();
@@ -103,29 +103,15 @@ export function DefectDoughnut({ labels, counts, maxSlices = 9 }: { labels: stri
     datasets: [{ data: Co, backgroundColor: colors, borderColor: '#fff', borderWidth: 2.5, borderRadius: 6, hoverOffset: 10, spacing: 2 }],
   };
   const options: ChartOptions<'doughnut'> = {
-    responsive: true, maintainAspectRatio: false, cutout: '64%', layout: { padding: 6 },
+    responsive: true, maintainAspectRatio: false, cutout: '62%',
+    // room on each side for the leader-line callout labels
+    layout: { padding: { left: 150, right: 150, top: 18, bottom: 18 } },
     plugins: {
-      legend: {
-        position: 'right',
-        labels: {
-          color: C.ink2, usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 9, font: { size: 11.5 },
-          // show the count next to every defect name, so the numbers are always visible
-          generateLabels: (chart) => {
-            const ds = chart.data.datasets[0];
-            return (chart.data.labels as string[]).map((lab, i) => ({
-              text: `${lab} — ${(ds.data[i] as number)}`,
-              fillStyle: (ds.backgroundColor as string[])[i],
-              strokeStyle: (ds.backgroundColor as string[])[i],
-              pointStyle: 'circle',
-              index: i,
-            }));
-          },
-        },
-      },
-      tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${c.label}: ${c.parsed} (${total ? ((Number(c.parsed) / total) * 100).toFixed(2) : 0}%)` } },
+      legend: { display: false },
+      tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${c.label}: ${c.parsed} Pieces (${total ? ((Number(c.parsed) / total) * 100).toFixed(2) : 0}%)` } },
     },
   };
-  return <Doughnut data={data} options={options} plugins={[doughnutCenter(total)]} />;
+  return <Doughnut data={data} options={options} plugins={[doughnutCenter(total), doughnutCallouts()]} />;
 }
 
 /** Defect Pareto — counts by code (single sequential series). */
