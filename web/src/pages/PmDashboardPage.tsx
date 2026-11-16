@@ -131,7 +131,7 @@ export default function PmDashboardPage() {
               {pareto.length > 0 ? <DefectDoughnut labels={pareto.map((c) => c.name)} counts={pareto.map((c) => c.count)} /> : <div className="fullcenter">No defects recorded</div>}
             </div>
           </div>
-          <div className="card pad pm-cell">
+          <div className="card pad pm-cell" style={{ gridColumn: '1 / -1' }}>
             <h3 className="ct">My Lines</h3><div className="cap">Tap a line to open its TV board</div>
             <div className="grow pm-lines">
               <table className="data" style={{ minWidth: 440 }}>
