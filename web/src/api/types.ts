@@ -30,7 +30,7 @@ export interface Overview {
 }
 
 export interface LineRow {
-  lineId: string; line: string; factoryId: string; factory: string;
+  lineId: string; line: string; seq: number; factoryId: string; factory: string;
   buyer: string; style: string; smv: number; manpower: number;
   dayTarget: number; achieved: number; projected: number;
   avgEff: number; targetEff: number; dhu: number; totalDefects: number;

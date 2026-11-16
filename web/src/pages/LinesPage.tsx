@@ -36,11 +36,9 @@ export default function LinesPage() {
           .some((v) => String(v).toLowerCase().includes(q)),
       );
     }
-    const FSEQ = ['AGL', 'ASL', 'AJL', 'ABM'];
-    const frank = (c: string) => { const i = FSEQ.indexOf(c); return i < 0 ? 99 : i; };
     data.sort((a, b) => {
-      // Serial line order: factory (canonical) then natural line number/letter.
-      if (sortKey === 'line') return (frank(a.factory) - frank(b.factory) || a.line.localeCompare(b.line, undefined, { numeric: true })) * sortDir;
+      // Serial line order = the PM allocation sequence (server-provided seq), not numeric.
+      if (sortKey === 'line') return (a.seq - b.seq) * sortDir;
       const x = a[sortKey], y = b[sortKey];
       if (typeof x === 'string' && typeof y === 'string') return x.localeCompare(y, undefined, { numeric: true }) * sortDir;
       return ((x as number) - (y as number)) * sortDir;

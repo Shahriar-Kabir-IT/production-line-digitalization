@@ -32,10 +32,15 @@ export const PM_ALLOCATION: { factory: string; pm: string; floor: string; lines:
 ];
 export const pmUsername = (factory: string, pm: string) => `${pm.replace(/[^a-z0-9]/gi, '').toLowerCase()}.${factory.toLowerCase()}`;
 
-// Each line's position within its PM's allocation list (the exact order in PM_ALLOCATION,
-// e.g. A, B, C, NEW-10, D …) — NOT numeric/alphabetical. Used to order PM-wise line lists.
+// Factory-wide line order = the exact sequence lines appear across the factory's PMs in
+// PM_ALLOCATION (PM1: A, B, C, NEW-10, D … then PM2: G, H, I, NEW-11 …). NOT numeric or
+// alphabetical. Used to order every line list (TV board, Line Output, PM dashboard).
 const LINE_ALLOC: Record<string, number> = {};
-PM_ALLOCATION.forEach((a) => a.lines.forEach((l, i) => { LINE_ALLOC[`${a.factory}|${l}`] = i; }));
+const _facCount: Record<string, number> = {};
+PM_ALLOCATION.forEach((a) => a.lines.forEach((l) => {
+  const key = `${a.factory}|${l}`;
+  if (LINE_ALLOC[key] === undefined) { _facCount[a.factory] = _facCount[a.factory] ?? 0; LINE_ALLOC[key] = _facCount[a.factory]++; }
+}));
 export const lineAllocRank = (factory: string | null | undefined, line: string): number =>
   LINE_ALLOC[`${factory ?? ''}|${line}`] ?? 999;
 

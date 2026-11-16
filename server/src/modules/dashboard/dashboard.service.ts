@@ -49,6 +49,8 @@ export function serializeLineRow(plan: PlanFull) {
   return {
     lineId: plan.lineId,
     line: plan.line.name,
+    // global allocation order: factory sequence, then line position within the factory's PMs
+    seq: factoryRank(plan.line.factory.code) * 1000 + lineAllocRank(plan.line.factory.code, plan.line.name),
     factoryId: plan.line.factoryId,
     factory: plan.line.factory.code,
     buyer: plan.buyerName,
@@ -88,7 +90,7 @@ export async function getLineRows(user: AuthUser, date: Date, factoryId?: string
   const plans = await plansForScope(user, date, factoryId);
   // Keep the canonical factory order (AGL, ASL, AJL, ABM); line order preserved within a factory.
   return plans.map(serializeLineRow)
-    .sort((a, b) => factoryRank(a.factory) - factoryRank(b.factory) || a.line.localeCompare(b.line, undefined, { numeric: true }));
+    .sort((a, b) => a.seq - b.seq);
 }
 
 export async function getOverview(user: AuthUser, date: Date) {
@@ -246,7 +248,7 @@ export async function getPmDashboard(pm: { id: string; name: string; factoryId: 
     orderBy: [{ line: { name: 'asc' } }],
   });
   // PM-wise order follows the allocation list exactly (A, B, C, NEW-10, D …), not numeric.
-  const rows = plans.map(serializeLineRow).sort((a, b) => lineAllocRank(a.factory, a.line) - lineAllocRank(b.factory, b.line));
+  const rows = plans.map(serializeLineRow).sort((a, b) => a.seq - b.seq);
 
   const target = rows.reduce((s, r) => s + r.dayTarget, 0);
   const achieved = rows.reduce((s, r) => s + r.achieved, 0);
