@@ -153,13 +153,14 @@ export function doughnutCallouts() {
       });
 
       const lineH = 34;
+      const half = 15; // each label is two text lines (name + pieces), ~15px above/below its y
       [1, -1].forEach((side) => {
         const list = items.filter((it) => it.side === side).sort((a, b) => a.y - b.y);
-        // push apart so labels don't overlap, then clamp into the plot area
+        // push apart so labels don't overlap, then clamp fully inside the plot area
         for (let k = 1; k < list.length; k++) if (list[k].y - list[k - 1].y < lineH) list[k].y = list[k - 1].y + lineH;
-        const overflow = list.length ? list[list.length - 1].y - (bottom - 6) : 0;
+        const overflow = list.length ? list[list.length - 1].y - (bottom - half) : 0;
         if (overflow > 0) list.forEach((it) => (it.y -= overflow));
-        const topOver = list.length ? (top + 6) - list[0].y : 0;
+        const topOver = list.length ? (top + half) - list[0].y : 0;
         if (topOver > 0) list.forEach((it) => (it.y += topOver));
 
         list.forEach((it) => {

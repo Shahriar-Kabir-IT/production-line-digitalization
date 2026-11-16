@@ -106,7 +106,7 @@ export default function DashboardPage() {
       <div className="card pad">
         <h3 className="ct">Defect Breakdown</h3>
         <div className="cap">{defects.data ? `${fmt(defects.data.totals.defects)} defects · ${fmt(defects.data.totals.checked)} checked · DHU ${defects.data.totals.dhu.toFixed(2)}%` : '…'}</div>
-        <div className="chart-h" style={{ height: 400 }}>
+        <div className="chart-h" style={{ height: 460 }}>
           {pareto.length > 0 && <DefectDoughnut labels={pareto.map((d) => d.name)} counts={pareto.map((d) => d.count)} />}
         </div>
       </div>

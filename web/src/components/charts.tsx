@@ -105,7 +105,7 @@ export function DefectDoughnut({ labels, counts, maxSlices = 9 }: { labels: stri
   const options: ChartOptions<'doughnut'> = {
     responsive: true, maintainAspectRatio: false, cutout: '62%',
     // room on each side for the leader-line callout labels
-    layout: { padding: { left: 150, right: 150, top: 18, bottom: 18 } },
+    layout: { padding: { left: 150, right: 150, top: 26, bottom: 26 } },
     plugins: {
       legend: { display: false },
       tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${c.label}: ${c.parsed} Pieces (${total ? ((Number(c.parsed) / total) * 100).toFixed(2) : 0}%)` } },

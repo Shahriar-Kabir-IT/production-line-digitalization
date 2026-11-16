@@ -127,7 +127,7 @@ export default function PmDashboardPage() {
           </div>
           <div className="card pad pm-cell" style={{ gridColumn: '1 / -1' }}>
             <h3 className="ct">Defect Breakdown</h3><div className="cap">Across my lines · {fmt(d.totals.defects)} defects · DHU {d.totals.dhu.toFixed(2)}%</div>
-            <div className="chart-h" style={{ height: 420 }}>
+            <div className="chart-h" style={{ height: 470 }}>
               {pareto.length > 0 ? <DefectDoughnut labels={pareto.map((c) => c.name)} counts={pareto.map((c) => c.count)} /> : <div className="fullcenter">No defects recorded</div>}
             </div>
           </div>
