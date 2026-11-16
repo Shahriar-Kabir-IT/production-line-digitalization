@@ -103,6 +103,31 @@ export function targetLinePlugin(yValue: number, label = 'Target') {
   };
 }
 
+/** Draw each bar's value on top of the bar. */
+export function barValueLabels(fmt: (v: number) => string) {
+  return {
+    id: 'barvals-' + Math.random().toString(36).slice(2),
+    afterDatasetsDraw(chart: Chart) {
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.font = "700 10px 'IBM Plex Mono'";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = C.ink;
+      chart.data.datasets.forEach((ds, di) => {
+        const meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        meta.data.forEach((el, i) => {
+          const v = ds.data[i] as number | null;
+          if (v == null || v <= 0) return;
+          ctx.fillText(fmt(Number(v)), (el as unknown as { x: number }).x, (el as unknown as { y: number }).y - 4);
+        });
+      });
+      ctx.restore();
+    },
+  };
+}
+
 /** Center label for a doughnut (big total + caption). */
 export function doughnutCenter(total: number, caption = 'defects') {
   return {

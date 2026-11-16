@@ -1,6 +1,10 @@
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import type { ChartData, ChartOptions, ScriptableContext } from 'chart.js';
-import { C, font, palette, tooltipStyle, targetLinePlugin, vGradient, doughnutCenter } from './chartSetup';
+import { C, font, palette, tooltipStyle, targetLinePlugin, vGradient, doughnutCenter, barValueLabels } from './chartSetup';
+
+const pctLabel = (v: number) => v.toFixed(2) + '%';
+const numLabel = (v: number) => Math.round(v).toLocaleString();
+const topPad = { layout: { padding: { top: 18 } } };
 
 const baseScales = (yCallback?: (v: number) => string) => ({
   x: { grid: { display: false }, border: { display: false }, ticks: { color: C.ink3, font } },
@@ -60,11 +64,11 @@ export function EfficiencyBars({ labels, efficiency, targetEff }: { labels: stri
     datasets: [{ data: efficiency as number[], ...BAR, backgroundColor: barGrad(colors), hoverBackgroundColor: barGrad(colors, 'ff') }],
   };
   const options: ChartOptions<'bar'> = {
-    responsive: true, maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false, ...topPad,
     plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${Number(c.parsed.y).toFixed(2)}% efficiency` } } },
     scales: { ...baseScales((v) => v + '%'), y: { ...baseScales().y, suggestedMax: 100, ticks: { color: C.ink3, font, padding: 8, stepSize: 25, callback: (v: number | string) => v + '%' } } },
   };
-  return <Bar data={data} options={options} plugins={[targetLinePlugin(targetEff)]} />;
+  return <Bar data={data} options={options} plugins={[targetLinePlugin(targetEff), barValueLabels(pctLabel)]} />;
 }
 
 /** Achieved vs Day Target, grouped by factory. */
@@ -77,11 +81,11 @@ export function FactoryTargetBars({ labels, target, achieved, colors }: { labels
     ],
   };
   const options: ChartOptions<'bar'> = {
-    responsive: true, maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false, ...topPad,
     plugins: { legend: { display: true, position: 'top', align: 'end', labels: { color: C.ink2, usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 10, font: { size: 12 } } }, tooltip: tooltipStyle },
     scales: baseScales(full),
   };
-  return <Bar data={data} options={options} />;
+  return <Bar data={data} options={options} plugins={[barValueLabels(numLabel)]} />;
 }
 
 /** Defect breakdown — doughnut by code with center total and legend. */
@@ -131,11 +135,11 @@ export function DefectParetoBars({ labels, counts }: { labels: string[]; counts:
     datasets: [{ data: counts, ...BAR, backgroundColor: (ctx) => vGradient(ctx.chart, C.brand), barPercentage: 0.72, categoryPercentage: 0.8 }],
   };
   const options: ChartOptions<'bar'> = {
-    responsive: true, maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false, ...topPad,
     plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${c.parsed.y} defects` } } },
     scales: baseScales(),
   };
-  return <Bar data={data} options={options} />;
+  return <Bar data={data} options={options} plugins={[barValueLabels(numLabel)]} />;
 }
 
 /** Average efficiency by factory with target line. */
@@ -145,9 +149,9 @@ export function FactoryEffBars({ labels, eff, colors, targetEff }: { labels: str
     datasets: [{ data: eff, ...BAR, backgroundColor: barGrad(colors), hoverBackgroundColor: barGrad(colors, 'ff'), barPercentage: 0.58 }],
   };
   const options: ChartOptions<'bar'> = {
-    responsive: true, maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false, ...topPad,
     plugins: { legend: { display: false }, tooltip: { ...tooltipStyle, callbacks: { label: (c) => ` ${Number(c.parsed.y).toFixed(2)}% avg efficiency` } } },
     scales: { ...baseScales((v) => v + '%'), y: { ...baseScales().y, suggestedMax: 100, ticks: { color: C.ink3, font, padding: 8, stepSize: 25, callback: (v: number | string) => v + '%' } } },
   };
-  return <Bar data={data} options={options} plugins={[targetLinePlugin(targetEff)]} />;
+  return <Bar data={data} options={options} plugins={[targetLinePlugin(targetEff), barValueLabels(pctLabel)]} />;
 }
