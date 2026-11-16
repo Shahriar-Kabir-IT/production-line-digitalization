@@ -12,8 +12,7 @@ const baseScales = (yCallback?: (v: number) => string) => ({
   },
 });
 
-const kfmt = (v: number) => (v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k' : String(v));
-const full = (v: number) => Math.round(v).toLocaleString(); // 1000, 1100, 1200 (no "k")
+const full = (v: number) => Math.round(v).toLocaleString(); // full numbers everywhere: 1000, 40,000 (no "k")
 
 // Per-bar vertical gradient from a list of base colors.
 const barGrad = (colors: string[], alphaBottom = 'c0') =>
@@ -80,7 +79,7 @@ export function FactoryTargetBars({ labels, target, achieved, colors }: { labels
   const options: ChartOptions<'bar'> = {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: true, position: 'top', align: 'end', labels: { color: C.ink2, usePointStyle: true, pointStyle: 'rectRounded', boxWidth: 10, font: { size: 12 } } }, tooltip: tooltipStyle },
-    scales: baseScales(kfmt),
+    scales: baseScales(full),
   };
   return <Bar data={data} options={options} />;
 }
