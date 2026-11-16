@@ -19,7 +19,10 @@ export default function DashboardPage() {
   if (overview.isLoading) return <div className="page"><Loading /></div>;
   const o = overview.data!;
   const isSuper = user?.role === 'SUPER_ADMIN' || user?.role === 'EXECUTIVE';
-  const avgTargetEff = o.factories.length ? o.factories.reduce((s, f) => s + f.targetEff, 0) / o.factories.length : 78;
+  // Average the target over factories that are actually reporting — otherwise empty
+  // factories (targetEff 0) dilute it (e.g. AGL's 63% shown as 16% across 4 factories).
+  const repFac = o.factories.filter((f) => f.reporting > 0);
+  const avgTargetEff = repFac.length ? repFac.reduce((s, f) => s + f.targetEff, 0) / repFac.length : 78;
   const pareto = (defects.data?.byCode ?? []).slice(0, 12);
   const rankOrder = [...o.factories].sort((a, b) => b.avgEff - a.avgEff).map((f) => f.factoryId);
   const rankOf = (id: string) => rankOrder.indexOf(id) + 1;
