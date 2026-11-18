@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import client from './client';
-import type { Board, DefectAnalytics, Device, Factory, LineRow, ManagedRole, Overview, PlanRecord, PmDashboard, PmLite, Station, SysOverview, SysUser } from './types';
+import type { AuditResponse, Board, DefectAnalytics, Device, Factory, LineRow, ManagedRole, Overview, PlanRecord, PmDashboard, PmLite, Station, SysOverview, SysUser } from './types';
 
 // ---- authenticated (Work Study / Super Admin) ----
 export function useFactories() {
@@ -137,6 +137,13 @@ export function useSysUserActions() {
     remove: useMutation({ mutationFn: async (id: string) => (await client.delete(`/sysadmin/users/${id}`)).data, onSuccess: refresh }),
     setLines: useMutation({ mutationFn: async (v: { id: string; lineIds: string[] }) => (await client.patch(`/sysadmin/users/${v.id}/lines`, { lineIds: v.lineIds })).data, onSuccess: refresh }),
   };
+}
+
+export function useAudit(params: { from?: string; to?: string; action?: string }) {
+  return useQuery({
+    queryKey: ['audit', params.from, params.to, params.action],
+    queryFn: async () => (await client.get<AuditResponse>('/sysadmin/audit', { params })).data,
+  });
 }
 
 export function useAdjustDefect(lineId: string) {

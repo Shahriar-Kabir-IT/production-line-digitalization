@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   useSysOverview, useSysDevices, useSysDeviceAction, usePublicFactories,
-  useSysUsers, useSysUserActions, type NewUser,
+  useSysUsers, useSysUserActions, useAudit, type NewUser,
 } from '../api/hooks';
 import type { Factory, ManagedRole, SysUser } from '../api/types';
 import { fmt } from '../lib/format';
 import { Loading, useToast } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+import { downloadAuditPdf, actionLabel } from '../lib/audit-report';
 
 function timeAgo(iso: string): string {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -168,6 +170,113 @@ function PmLinesEditor({ pm, factories, onClose, onSave, saving }: { pm: SysUser
   );
 }
 
+function dayStr(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+const ACTION_OPTIONS = [
+  'LOGIN', 'LOGIN_FAILED', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE', 'PM_LINES_SET',
+  'DEVICE_LOCK', 'DEVICE_UNLOCK', 'DEVICE_RENAME', 'DEVICE_DELETE', 'DEVICE_SELF_LOCK', 'DEVICE_SELF_LOCK_PM',
+  'DEFECT_CODE_CREATE', 'PLAN_CREATE', 'PLAN_UPDATE', 'HOUR_REASON_SET',
+];
+
+function relTime(iso: string): string {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 45) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+function AuditSection() {
+  const toast = useToast();
+  const { user } = useAuth();
+  const [from, setFrom] = useState(dayStr(-30));
+  const [to, setTo] = useState(dayStr(0));
+  const [action, setAction] = useState('');
+  const [downloading, setDownloading] = useState(false);
+
+  const params = useMemo(() => ({ from, to, action: action || undefined }), [from, to, action]);
+  const audit = useAudit(params);
+  const data = audit.data;
+
+  const onDownload = async () => {
+    if (from && to && from > to) return toast('“From” date is after “To” date', 'err');
+    setDownloading(true);
+    try {
+      const r = await downloadAuditPdf({ from, to, action: action || undefined }, user?.name || 'System Administrator');
+      toast(r.total === 0 ? 'No events in range — empty report downloaded' : `PDF ready — ${r.shown}${r.capped ? ` of ${r.total}` : ''} event${r.shown === 1 ? '' : 's'}`);
+    } catch (e: any) {
+      toast(e?.response?.data?.error || 'Could not generate the report', 'err');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const preview = (data?.logs ?? []).slice(0, 80);
+
+  return (
+    <>
+      <div className="sec-title"><h2>Audit Trail</h2><div className="ln" />
+        <span className="muted" style={{ fontSize: 12 }}>Sign-ins, user &amp; device management, plan edits and kiosk changes</span>
+      </div>
+
+      <div className="card" style={{ padding: 16, marginBottom: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 10, alignItems: 'end' }}>
+          <label className="field"><span className="eyebrow">From</span>
+            <input className="input" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          </label>
+          <label className="field"><span className="eyebrow">To</span>
+            <input className="input" type="date" value={to} min={from} max={dayStr(0)} onChange={(e) => setTo(e.target.value)} />
+          </label>
+          <label className="field"><span className="eyebrow">Event type</span>
+            <select className="select" value={action} onChange={(e) => setAction(e.target.value)}>
+              <option value="">All events</option>
+              {ACTION_OPTIONS.map((a) => <option key={a} value={a}>{actionLabel(a)}</option>)}
+            </select>
+          </label>
+          <button className="btn primary" style={{ height: 40 }} disabled={downloading} onClick={onDownload}>
+            {downloading ? 'Preparing…' : '⬇ Download PDF report'}
+          </button>
+        </div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+          {audit.isLoading ? 'Loading…' : `${data?.total ?? 0} event${(data?.total ?? 0) === 1 ? '' : 's'} in this range`}
+          {data?.capped ? ` — report includes the most recent ${data.max.toLocaleString()}` : ''}
+          . The PDF contains the full detail; the table below previews the latest {Math.min(80, preview.length)}.
+        </div>
+      </div>
+
+      <div className="tablewrap">
+        <table className="data" style={{ minWidth: 900 }}>
+          <thead><tr>
+            <th>When</th><th>Actor</th><th>Type</th><th>Event</th><th>Details</th><th>IP</th>
+          </tr></thead>
+          <tbody>
+            {audit.isLoading ? (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 28, color: 'var(--ink-3)' }}>Loading…</td></tr>
+            ) : preview.length === 0 ? (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 28, color: 'var(--ink-3)' }}>No events recorded for this range.</td></tr>
+            ) : preview.map((l) => (
+              <tr key={l.id}>
+                <td style={{ whiteSpace: 'nowrap' }} title={new Date(l.at).toLocaleString()}>{relTime(l.at)}</td>
+                <td><div style={{ fontWeight: 600 }}>{l.actorName || (l.actorType === 'DEVICE' ? 'Station device' : l.actorType === 'SYSTEM' ? 'System' : 'Unknown')}</div>{l.actorRole && <div className="muted" style={{ fontSize: 12 }}>{l.actorRole}</div>}</td>
+                <td className="muted" style={{ fontSize: 12 }}>{l.actorType}</td>
+                <td style={{ whiteSpace: 'nowrap', color: l.action === 'LOGIN_FAILED' ? 'var(--crit)' : 'inherit', fontWeight: 600 }}>{actionLabel(l.action)}</td>
+                <td style={{ maxWidth: 420 }}>{l.summary || '—'}</td>
+                <td className="muted" style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>{l.ip || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+type Tab = 'users' | 'devices' | 'audit';
+
 export default function SysAdminPage() {
   const toast = useToast();
   const overview = useSysOverview();
@@ -175,6 +284,7 @@ export default function SysAdminPage() {
   const factories = usePublicFactories();
   const act = useSysDeviceAction();
   const [pick, setPick] = useState<Record<string, string>>({});
+  const [tab, setTab] = useState<Tab>('users');
 
   if (overview.isLoading || devices.isLoading) return <div className="page"><Loading /></div>;
   const o = overview.data!;
@@ -205,7 +315,7 @@ export default function SysAdminPage() {
       <div className="page-head">
         <div>
           <h1>System Administration</h1>
-          <div className="sub">Manage logins and station PCs.</div>
+          <div className="sub">Manage logins, station PCs, and the audit trail.</div>
         </div>
       </div>
 
@@ -218,8 +328,19 @@ export default function SysAdminPage() {
         ))}
       </div>
 
-      <UsersSection factories={facs} />
+      <div className="seg" role="tablist" style={{ display: 'inline-flex', gap: 4, padding: 4, background: 'var(--surface-2,#f1f5f9)', border: '1px solid var(--line)', borderRadius: 10, margin: '20px 0 18px' }}>
+        {([['users', 'Users & Logins'], ['devices', 'Station Devices'], ['audit', 'Audit Trail']] as [Tab, string][]).map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={tab === k} className="btn ghost"
+            style={{ padding: '7px 14px', fontSize: 13, fontWeight: 600, borderRadius: 7, background: tab === k ? 'var(--surface,#fff)' : 'transparent', color: tab === k ? 'var(--brand)' : 'var(--ink-2)', boxShadow: tab === k ? '0 1px 2px rgba(16,22,34,.08)' : 'none' }}
+            onClick={() => setTab(k)}>{label}</button>
+        ))}
+      </div>
 
+      {tab === 'users' && <UsersSection factories={facs} />}
+
+      {tab === 'audit' && <AuditSection />}
+
+      {tab === 'devices' && <>
       <div className="sec-title"><h2>Station Devices</h2><div className="ln" />
         <span className="muted" style={{ fontSize: 12 }}>A device registers automatically when it opens the station</span>
       </div>
@@ -261,6 +382,7 @@ export default function SysAdminPage() {
           </tbody>
         </table>
       </div>
+      </>}
     </div>
   );
 }

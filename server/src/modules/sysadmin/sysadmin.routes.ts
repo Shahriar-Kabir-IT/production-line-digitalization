@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma';
 import { asyncHandler, AppError } from '../../utils/http';
 import { requireAuth, requireRole } from '../../middleware/auth';
 import { listDevices, unlockDevice, adminLockDevice, renameDevice, deleteDevice } from './device.service';
+import { audit, userActor } from '../../lib/audit';
 
 export const sysadminRouter = Router();
 sysadminRouter.use(requireAuth, requireRole(Role.SYS_ADMIN));
@@ -27,21 +28,33 @@ sysadminRouter.get(
 
 sysadminRouter.get('/devices', asyncHandler(async (_req, res) => res.json({ devices: await listDevices() })));
 
-sysadminRouter.post('/devices/:id/unlock', asyncHandler(async (req, res) => res.json(await unlockDevice(req.params.id))));
+sysadminRouter.post('/devices/:id/unlock', asyncHandler(async (req, res) => {
+  const out = await unlockDevice(req.params.id);
+  await audit(userActor(req), 'DEVICE_UNLOCK', { entity: 'Device', entityId: req.params.id, summary: `Unlocked station device ${out?.name ? `"${out.name}"` : req.params.id}` });
+  res.json(out);
+}));
 
 const lockBody = z.object({ lineId: z.string().min(1) });
 sysadminRouter.post('/devices/:id/lock', asyncHandler(async (req, res) => {
   const { lineId } = lockBody.parse(req.body);
-  res.json(await adminLockDevice(req.params.id, lineId));
+  const out = await adminLockDevice(req.params.id, lineId);
+  await audit(userActor(req), 'DEVICE_LOCK', { entity: 'Device', entityId: req.params.id, summary: `Locked station device ${out?.name ? `"${out.name}"` : req.params.id} to line ${out?.line ?? lineId}`, meta: { lineId } });
+  res.json(out);
 }));
 
 const nameBody = z.object({ name: z.string().min(1).max(80) });
 sysadminRouter.patch('/devices/:id', asyncHandler(async (req, res) => {
   const { name } = nameBody.parse(req.body);
-  res.json(await renameDevice(req.params.id, name));
+  const out = await renameDevice(req.params.id, name);
+  await audit(userActor(req), 'DEVICE_RENAME', { entity: 'Device', entityId: req.params.id, summary: `Renamed station device to "${name}"`, meta: { name } });
+  res.json(out);
 }));
 
-sysadminRouter.delete('/devices/:id', asyncHandler(async (req, res) => res.json(await deleteDevice(req.params.id))));
+sysadminRouter.delete('/devices/:id', asyncHandler(async (req, res) => {
+  const out = await deleteDevice(req.params.id);
+  await audit(userActor(req), 'DEVICE_DELETE', { entity: 'Device', entityId: req.params.id, summary: `Removed station device ${req.params.id}` });
+  res.json(out);
+}));
 
 // ---------------------------------------------------------------------------
 // User management — create/edit/remove the people who can log in.
@@ -97,6 +110,7 @@ sysadminRouter.post(
     if (await prisma.user.findUnique({ where: { username } })) throw new AppError(409, 'Username already taken');
     const passwordHash = await bcrypt.hash(b.password, 10);
     const u = await prisma.user.create({ data: { username, name: b.name, passwordHash, role: b.role as Role, factoryId } });
+    await audit(userActor(req), 'USER_CREATE', { entity: 'User', entityId: u.id, summary: `Created user "${username}" (${b.name}) as ${b.role}`, meta: { username, name: b.name, role: b.role, factoryId } });
     res.status(201).json({ id: u.id });
   }),
 );
@@ -152,6 +166,13 @@ sysadminRouter.patch(
     }
 
     await prisma.user.update({ where: { id: target.id }, data });
+    const changes: string[] = [];
+    if (b.name !== undefined && b.name !== target.name) changes.push(`name → "${b.name}"`);
+    if (b.role !== undefined && b.role !== target.role) changes.push(`role → ${b.role}`);
+    if (b.factoryId !== undefined && data.factoryId !== target.factoryId) changes.push('factory reassigned');
+    if (b.isActive !== undefined && b.isActive !== target.isActive) changes.push(b.isActive ? 'reactivated' : 'deactivated');
+    if (b.password) changes.push('password reset');
+    await audit(userActor(req), 'USER_UPDATE', { entity: 'User', entityId: target.id, summary: `Updated user "${target.username}"${changes.length ? ` — ${changes.join(', ')}` : ''}`, meta: { changes } });
     res.json({ ok: true });
   }),
 );
@@ -165,6 +186,7 @@ sysadminRouter.delete(
     if (!target) throw new AppError(404, 'User not found');
     if (target.role === Role.SYS_ADMIN) await assertNotLastSysadmin(target.id);
     await prisma.user.delete({ where: { id: target.id } }); // optional FKs (plans, lines, devices) set null automatically
+    await audit(userActor(req), 'USER_DELETE', { entity: 'User', entityId: target.id, summary: `Deleted user "${target.username}" (${target.name}, ${target.role})`, meta: { username: target.username, role: target.role } });
     res.json({ ok: true });
   }),
 );
@@ -182,6 +204,49 @@ sysadminRouter.patch(
       prisma.line.updateMany({ where: { pmUserId: pm.id }, data: { pmUserId: null } }),
       ...(lineIds.length ? [prisma.line.updateMany({ where: { id: { in: lineIds }, factoryId: pm.factoryId ?? undefined }, data: { pmUserId: pm.id } })] : []),
     ]);
+    await audit(userActor(req), 'PM_LINES_SET', { entity: 'User', entityId: pm.id, summary: `Set ${lineIds.length} line${lineIds.length === 1 ? '' : 's'} for Production Manager "${pm.name}"`, meta: { lineIds } });
     res.json({ ok: true });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Audit trail — read the append-only log (for the on-screen view + PDF export).
+// ---------------------------------------------------------------------------
+const AUDIT_MAX = 20000;
+sysadminRouter.get(
+  '/audit',
+  asyncHandler(async (req, res) => {
+    const parseDay = (v: unknown, end: boolean): Date | undefined => {
+      if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined;
+      return new Date(`${v}T${end ? '23:59:59.999' : '00:00:00.000'}`);
+    };
+    const gte = parseDay(req.query.from, false);
+    const lte = parseDay(req.query.to, true);
+    const action = typeof req.query.action === 'string' && req.query.action ? req.query.action : undefined;
+    const where = {
+      ...(gte || lte ? { createdAt: { ...(gte ? { gte } : {}), ...(lte ? { lte } : {}) } } : {}),
+      ...(action ? { action } : {}),
+    };
+    const [total, logs] = await Promise.all([
+      prisma.auditLog.count({ where }),
+      prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' }, take: AUDIT_MAX }),
+    ]);
+    res.json({
+      total,
+      capped: total > AUDIT_MAX,
+      max: AUDIT_MAX,
+      logs: logs.map((l) => ({
+        id: l.id,
+        at: l.createdAt,
+        actorType: l.actorType,
+        actorName: l.actorName,
+        actorRole: l.actorRole,
+        ip: l.ip,
+        action: l.action,
+        entity: l.entity,
+        entityId: l.entityId,
+        summary: l.summary,
+      })),
+    });
   }),
 );

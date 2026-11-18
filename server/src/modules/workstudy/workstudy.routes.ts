@@ -6,6 +6,7 @@ import { asyncHandler, AppError } from '../../utils/http';
 import { requireAuth, requireRole, assertFactoryScope } from '../../middleware/auth';
 import { normalizeDate } from '../dashboard/dashboard.service';
 import { emitLineUpdate } from '../../lib/socket';
+import { audit, userActor } from '../../lib/audit';
 
 export const workstudyRouter = Router();
 
@@ -65,14 +66,18 @@ workstudyRouter.post(
       authorId: req.user!.id,
     };
 
+    const existing = await prisma.workStudyPlan.findUnique({ where: { lineId_date: { lineId: body.lineId, date } } });
     const plan = await prisma.workStudyPlan.upsert({
       where: { lineId_date: { lineId: body.lineId, date } },
       update: data,
       create: { lineId: body.lineId, date, ...data },
     });
 
-    await prisma.auditLog.create({
-      data: { actorId: req.user!.id, action: 'UPSERT_PLAN', entity: 'WorkStudyPlan', entityId: plan.id },
+    await audit(userActor(req), existing ? 'PLAN_UPDATE' : 'PLAN_CREATE', {
+      entity: 'WorkStudyPlan',
+      entityId: plan.id,
+      summary: `${existing ? 'Updated' : 'Created'} plan for ${line.name} on ${body.date} — ${body.buyerName} / ${body.style}, target ${body.dayTarget} over ${data.plannedHours}h`,
+      meta: { lineId: body.lineId, date: body.date, buyer: body.buyerName, style: body.style, smv: body.smv, manpower: body.manpower, dayTarget: body.dayTarget, plannedHours: data.plannedHours },
     });
     emitLineUpdate(body.lineId, { type: 'plan' });
     res.json({ plan });

@@ -159,12 +159,19 @@ model HourlyDefect {
 
 model AuditLog {
   id        String   @id @default(cuid())
+  actorType String   @default("USER") // USER | DEVICE | SYSTEM
   actorId   String?
+  actorName String? // snapshot of who acted (survives user deletion)
+  actorRole String? // snapshot of their role at the time
+  ip        String?
   action    String
   entity    String
   entityId  String?
-  meta      Json?
+  summary   String? // human-readable one-line description
+  meta      Json? // optional before/after detail
   createdAt DateTime @default(now())
 
   @@index([entity, entityId])
+  @@index([createdAt])
+  @@index([action])
 }

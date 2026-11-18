@@ -84,6 +84,20 @@ export interface SysUser {
   isActive: boolean; createdAt: string;
 }
 
+export interface AuditEntry {
+  id: string;
+  at: string;
+  actorType: 'USER' | 'DEVICE' | 'SYSTEM';
+  actorName: string | null;
+  actorRole: string | null;
+  ip: string | null;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  summary: string | null;
+}
+export interface AuditResponse { total: number; capped: boolean; max: number; logs: AuditEntry[]; }
+
 export interface PmLite { id: string; name: string; factory: string | null; factoryName: string | null; lineCount: number; }
 
 export interface PmDashboard {

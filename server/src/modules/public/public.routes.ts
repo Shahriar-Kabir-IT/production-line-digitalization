@@ -8,6 +8,7 @@ import { getStation, adjustCheck, adjustDefect, setReason } from './station.serv
 import { getOrRegisterDevice, lockDevice, lockDeviceToPm } from '../sysadmin/device.service';
 import { clientIp } from '../../lib/ip';
 import { factoryRank, lineAllocRank } from '../../lib/constants';
+import { audit, deviceActor } from '../../lib/audit';
 
 // No-login kiosk endpoints: the QC station and the TV board.
 export const publicRouter = Router();
@@ -52,6 +53,7 @@ publicRouter.post(
     const created = await prisma.defectCode.create({
       data: { code: CODE, name, custom: true, active: true, sortOrder: (max._max.sortOrder ?? 0) + 1 },
     });
+    await audit(deviceActor(req), 'DEFECT_CODE_CREATE', { entity: 'DefectCode', entityId: created.code, summary: `Added custom defect code "${created.code}" — ${created.name}`, meta: { code: created.code, name: created.name } });
     res.status(201).json({ code: created.code, name: created.name });
   }),
 );
@@ -107,7 +109,9 @@ publicRouter.post(
   '/station/:lineId/reason',
   asyncHandler(async (req, res) => {
     const b = reasonSchema.parse(req.body);
-    res.json(await setReason(req.params.lineId, b.date, b.hourIndex, b.reason));
+    const out = await setReason(req.params.lineId, b.date, b.hourIndex, b.reason);
+    await audit(deviceActor(req), 'HOUR_REASON_SET', { entity: 'HourlyEntry', entityId: req.params.lineId, summary: b.reason.trim() ? `Hour-${b.hourIndex + 1} reason on ${b.date}: "${b.reason.trim()}"` : `Cleared hour-${b.hourIndex + 1} reason on ${b.date}`, meta: { lineId: req.params.lineId, date: b.date, hourIndex: b.hourIndex, reason: b.reason } });
+    res.json(out);
   }),
 );
 
@@ -130,7 +134,9 @@ publicRouter.post(
   asyncHandler(async (req, res) => {
     const id = deviceIdSchema.parse(req.params.deviceId);
     const b = lockSchema.parse(req.body);
-    res.json(await lockDevice(id, b.lineId, clientIp(req), b.name));
+    const out = await lockDevice(id, b.lineId, clientIp(req), b.name);
+    await audit(deviceActor(req, id, b.name), 'DEVICE_SELF_LOCK', { entity: 'Device', entityId: id, summary: `Station device${b.name ? ` "${b.name}"` : ''} locked itself to line ${out?.line ?? b.lineId}`, meta: { lineId: b.lineId } });
+    res.json(out);
   }),
 );
 
@@ -141,6 +147,8 @@ publicRouter.post(
   asyncHandler(async (req, res) => {
     const id = deviceIdSchema.parse(req.params.deviceId);
     const b = lockPmSchema.parse(req.body);
-    res.json(await lockDeviceToPm(id, b.pmId, clientIp(req), b.name));
+    const out = await lockDeviceToPm(id, b.pmId, clientIp(req), b.name);
+    await audit(deviceActor(req, id, b.name), 'DEVICE_SELF_LOCK_PM', { entity: 'Device', entityId: id, summary: `TV board${b.name ? ` "${b.name}"` : ''} locked itself to PM ${out?.pmName ?? b.pmId}`, meta: { pmId: b.pmId } });
+    res.json(out);
   }),
 );
